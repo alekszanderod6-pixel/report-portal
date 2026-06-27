@@ -1,1558 +1,1199 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Weekly Report Portal – MCI</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekly Report Portal – Sunon Asogli</title>
 
-    <!-- Tailwind + Font Awesome + html2pdf -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- Tailwind + Font Awesome + html2pdf -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- Supabase JS -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* ── Sunon Asogli inspired colours ── */
+    :root {
+      --primary: #0a2540;      /* deep navy */
+      --gold: #d4af37;         /* gold */
+      --gold-light: #f5c842;
+      --orange: #e67e22;
+      --bg-gradient: linear-gradient(135deg, #0a2540 0%, #1a3a5c 50%, #2a4a6c 100%);
+    }
 
-    <style>
-        /* ── global ── */
-        * { box-sizing: border-box; }
-        body { background: #f0f4ff; }
+    * { box-sizing: border-box; }
+    body { background: #f0f4ff; }
 
-        /* ── scrollbar ── */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 8px; }
-        ::-webkit-scrollbar-thumb { background: #818cf8; border-radius: 8px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 8px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--orange); }
 
-        /* ── auth page gradient ── */
-        .auth-gradient {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #2563eb 100%);
-        }
+    .auth-gradient {
+      background: var(--bg-gradient);
+    }
 
-        /* ── glassmorphism cards ── */
-        .glass {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-        }
+    .glass {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
 
-        .glass-dark {
-            background: rgba(30, 27, 75, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
+    .glass-dark {
+      background: rgba(10, 37, 64, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(212, 175, 55, 0.2);
+    }
 
-        /* ── table styling ── */
-        .report-table th {
-            background: #1e1b4b !important;
-            color: #f1f5f9 !important;
-            font-weight: 600;
-            text-align: center;
-            padding: 12px 8px;
-            border: 1px solid #312e81;
-        }
-        .report-table td {
-            padding: 12px 8px;
-            border: 1px solid #e2e8f0;
-            vertical-align: top;
-            background: white;
-        }
-        .report-table tr:nth-child(even) td { background: #f8fafc; }
-        .report-table tr:hover td { background: #eef2ff; transition: background 0.15s; }
+    .report-table th {
+      background: var(--primary) !important;
+      color: var(--gold) !important;
+      font-weight: 700;
+      text-align: center;
+      padding: 12px 8px;
+      border: 1px solid #2a4a6c;
+    }
+    .report-table td {
+      padding: 12px 8px;
+      border: 1px solid #e2e8f0;
+      vertical-align: top;
+      background: white;
+    }
+    .report-table tr:nth-child(even) td { background: #f8fafc; }
+    .report-table tr:hover td { background: #fefce8; transition: 0.15s; }
 
-        /* ── PDF preview table (same as before, but keep clean) ── */
-        .pdf-preview-table th {
-            background: #1e1b4b !important;
-            color: white !important;
-            font-weight: 600;
-            text-align: center;
-            padding: 8px 6px;
-            border: 1px solid #312e81;
-            font-size: 10px;
-        }
-        .pdf-preview-table td {
-            padding: 8px 6px;
-            border: 1px solid #cbd5e1;
-            vertical-align: top;
-            font-size: 10px;
-            background: white;
-        }
-        .pdf-preview-table tr:nth-child(even) td { background: #f8fafc; }
+    .pdf-preview-table th {
+      background: var(--primary) !important;
+      color: var(--gold) !important;
+      font-weight: 700;
+      text-align: center;
+      padding: 8px 6px;
+      border: 1px solid #2a4a6c;
+      font-size: 10px;
+    }
+    .pdf-preview-table td {
+      padding: 8px 6px;
+      border: 1px solid #cbd5e1;
+      vertical-align: top;
+      font-size: 10px;
+      background: white;
+    }
+    .pdf-preview-table tr:nth-child(even) td { background: #f8fafc; }
 
-        /* ── buttons & interactions ── */
-        .paraphrase-btn:active { transform: scale(0.94); }
-        .btn-primary {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            transition: all 0.2s ease;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -10px rgba(79, 70, 229, 0.5);
-        }
-        .btn-success {
-            background: linear-gradient(135deg, #059669, #10b981);
-            transition: all 0.2s ease;
-        }
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -10px rgba(5, 150, 105, 0.5);
-        }
-        .btn-danger {
-            background: linear-gradient(135deg, #dc2626, #ef4444);
-            transition: all 0.2s ease;
-        }
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -10px rgba(220, 38, 38, 0.5);
-        }
-        .btn-outline {
-            border: 2px solid #cbd5e1;
-            transition: all 0.2s ease;
-        }
-        .btn-outline:hover {
-            border-color: #4f46e5;
-            color: #4f46e5;
-            background: #eef2ff;
-            transform: translateY(-2px);
-        }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), #1a3a5c);
+      transition: all 0.2s ease;
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -10px rgba(10, 37, 64, 0.5);
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      transition: all 0.2s ease;
+      color: var(--primary);
+    }
+    .btn-gold:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -10px rgba(212, 175, 55, 0.5);
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+      transition: all 0.2s ease;
+      color: white;
+    }
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -10px rgba(220, 38, 38, 0.5);
+    }
+    .btn-outline {
+      border: 2px solid #cbd5e1;
+      transition: all 0.2s ease;
+      color: #475569;
+    }
+    .btn-outline:hover {
+      border-color: var(--gold);
+      color: var(--primary);
+      background: #fefce8;
+      transform: translateY(-2px);
+    }
 
-        /* ── spinner ── */
-        .spinner {
-            border: 3px solid #e2e8f0;
-            border-top: 3px solid #4f46e5;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 0.7s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      border: 3px solid #e2e8f0;
+      border-top: 3px solid var(--gold);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-        .fade-in { animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 
-        /* ── loader overlay ── */
-        #loader {
-            position: fixed;
-            inset: 0;
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 999;
-            flex-direction: column;
-            gap: 16px;
-            transition: opacity 0.3s;
-        }
-        #loader.hidden { opacity: 0; pointer-events: none; }
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      flex-direction: column;
+      gap: 16px;
+      transition: opacity 0.3s;
+    }
+    #loader.hidden { opacity: 0; pointer-events: none; }
 
-        /* ── navigation tabs ── */
-        .nav-tab {
-            cursor: pointer;
-            padding: 10px 22px;
-            border-radius: 40px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-            background: transparent;
-            color: #475569;
-        }
-        .nav-tab.active {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: white;
-            box-shadow: 0 8px 20px -8px rgba(79, 70, 229, 0.4);
-        }
-        .nav-tab:not(.active):hover {
-            background: rgba(79, 70, 229, 0.08);
-            color: #4f46e5;
-        }
+    .nav-tab {
+      cursor: pointer;
+      padding: 10px 22px;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      background: transparent;
+      color: #475569;
+    }
+    .nav-tab.active {
+      background: linear-gradient(135deg, var(--primary), #1a3a5c);
+      color: var(--gold);
+      box-shadow: 0 8px 20px -8px rgba(10, 37, 64, 0.4);
+    }
+    .nav-tab:not(.active):hover {
+      background: rgba(10, 37, 64, 0.06);
+      color: var(--primary);
+    }
 
-        /* ── input focus ── */
-        input:focus, textarea:focus, select:focus {
-            border-color: #4f46e5 !important;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2) !important;
-            outline: none;
-        }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--gold) !important;
+      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2) !important;
+      outline: none;
+    }
 
-        /* ── small tweaks ── */
-        .border-gradient {
-            border-image: linear-gradient(135deg, #4f46e5, #7c3aed) 1;
-            border-radius: 16px;
-        }
-        .shadow-soft {
-            box-shadow: 0 4px 20px -6px rgba(0, 0, 0, 0.06);
-        }
-    </style>
+    .auth-tab-btn {
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    .auth-tab-btn.active {
+      background: var(--primary) !important;
+      color: var(--gold) !important;
+      box-shadow: 0 4px 12px rgba(10, 37, 64, 0.3);
+    }
+    .auth-tab-btn.inactive {
+      background: #f1f5f9 !important;
+      color: #64748b !important;
+    }
+    .auth-tab-btn.inactive:hover {
+      background: #e2e8f0 !important;
+    }
+
+    .gold-text { color: var(--gold); }
+    .gold-border { border-color: var(--gold); }
+    .bg-gold { background: var(--gold); }
+  </style>
 </head>
 <body>
 
-    <!-- ===== LOADER ===== -->
-    <div id="loader" class="hidden">
-        <div class="spinner"></div>
-        <span class="text-sm font-medium text-indigo-700">Loading…</span>
+<!-- ===== LOADER ===== -->
+<div id="loader" class="hidden">
+  <div class="spinner"></div>
+  <span class="text-sm font-medium text-primary">Loading…</span>
+</div>
+
+<div id="app" class="min-h-screen font-sans antialiased">
+
+  <!-- ─── AUTH PAGE ─── -->
+  <div id="authPage" class="min-h-screen flex items-center justify-center auth-gradient px-4 py-8">
+    <div class="w-full max-w-md glass rounded-3xl p-8 shadow-2xl">
+      <div class="text-center mb-8">
+        <div class="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold mx-auto shadow-lg" style="background: linear-gradient(135deg, var(--primary), #1a3a5c); color: var(--gold);">SA</div>
+        <h2 class="text-3xl font-extrabold text-slate-800 mt-4">Maintenance Portal</h2>
+        <p class="text-sm text-slate-500 mt-1">Sunon Asogli Power Ghana</p>
+      </div>
+
+      <!-- Auth Tabs -->
+      <div class="flex bg-slate-100 rounded-2xl p-1.5 mb-6">
+        <button id="authLoginTab" class="auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition">Login</button>
+        <button id="authSignupTab" class="auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition">Sign Up</button>
+      </div>
+
+      <!-- Login -->
+      <div id="loginFormContainer">
+        <form id="loginForm" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Email</label>
+            <input id="loginEmail" type="email" placeholder="you@example.com" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Password</label>
+            <input id="loginPassword" type="password" placeholder="••••••••" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition" required />
+          </div>
+          <button type="submit" class="w-full py-3 btn-primary font-bold rounded-xl shadow-lg transition">Sign In</button>
+          <div id="authError" class="text-sm text-rose-500 text-center hidden"></div>
+        </form>
+      </div>
+
+      <!-- Signup -->
+      <div id="signupFormContainer" class="hidden">
+        <form id="signupForm" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Full Name</label>
+            <input id="signupName" type="text" placeholder="Alexander Opoku Dwumaah" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Email</label>
+            <input id="signupEmail" type="email" placeholder="you@example.com" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Password</label>
+            <input id="signupPassword" type="password" placeholder="•••••••• (min 6 chars)" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition" required minlength="6" />
+          </div>
+          <button type="submit" class="w-full py-3 btn-gold font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5">Create Account</button>
+          <div id="signupError" class="text-sm text-rose-500 text-center hidden"></div>
+        </form>
+      </div>
+
+      <p class="text-xs text-slate-400 text-center mt-6">Secured with Supabase Auth</p>
+    </div>
+  </div>
+
+  <!-- ─── MAIN APP ─── -->
+  <div id="mainApp" class="hidden bg-gradient-to-br from-slate-50 to-white min-h-screen">
+
+    <!-- Header -->
+    <header class="glass-dark sticky top-0 z-40 border-b border-gold/20 shadow-xl">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg" style="background: linear-gradient(135deg, var(--primary), #1a3a5c); color: var(--gold);">SA</div>
+          <div>
+            <h1 class="text-xl font-bold text-white tracking-tight">Weekly Report Portal</h1>
+            <p class="text-xs text-gold-200">Maintenance – Controls &amp; Instrumentations</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 text-sm">
+          <span class="text-gold-200 hidden sm:inline">
+            <i class="far fa-user mr-1"></i> <span id="headerUserName" class="font-medium text-white">—</span>
+          </span>
+          <button onclick="logout()" class="px-3 py-1.5 text-sm text-rose-300 hover:text-white hover:bg-rose-500/30 rounded-lg transition backdrop-blur-sm">
+            <i class="fas fa-sign-out-alt mr-1"></i> Logout
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 flex flex-wrap gap-2 border-b border-slate-200/70 pb-3">
+      <div class="nav-tab active" data-tab="report" onclick="switchTab('report')">
+        <i class="fas fa-pen-to-square mr-1.5"></i> My Report
+      </div>
+      <div class="nav-tab" data-tab="saved" onclick="switchTab('saved')">
+        <i class="fas fa-folder-open mr-1.5"></i> Saved Reports
+      </div>
+      <div id="adminTab" class="nav-tab hidden" data-tab="admin" onclick="switchTab('admin')">
+        <i class="fas fa-users-cog mr-1.5"></i> Admin Dashboard
+      </div>
     </div>
 
-    <!-- ===== APP ===== -->
-    <div id="app" class="min-h-screen font-sans antialiased">
-
-        <!-- ─── AUTH PAGE ─── -->
-        <div id="authPage" class="min-h-screen flex items-center justify-center auth-gradient px-4 py-8">
-            <div class="w-full max-w-md glass rounded-3xl p-8 shadow-2xl">
-                <div class="text-center mb-8">
-                    <div class="w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center text-white text-3xl font-bold mx-auto shadow-lg">MCI</div>
-                    <h2 class="text-3xl font-extrabold text-slate-800 mt-4">Maintenance Portal</h2>
-                    <p class="text-sm text-slate-500 mt-1">Sign in to manage your weekly reports</p>
-                </div>
-
-                <!-- Tabs -->
-                <div class="flex bg-slate-100 rounded-2xl p-1.5 mb-6">
-                    <button id="loginTab" class="flex-1 py-2.5 text-sm font-semibold rounded-xl text-white bg-indigo-600 transition shadow-sm">Login</button>
-                    <button id="signupTab" class="flex-1 py-2.5 text-sm font-semibold rounded-xl text-slate-600 hover:bg-slate-200 transition">Sign Up</button>
-                </div>
-
-                <!-- Login -->
-                <form id="loginForm" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700">Email</label>
-                        <input id="loginEmail" type="email" placeholder="you@example.com" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition" required />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700">Password</label>
-                        <input id="loginPassword" type="password" placeholder="••••••••" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition" required />
-                    </div>
-                    <button type="submit" class="w-full py-3 btn-primary text-white font-bold rounded-xl shadow-lg transition">Sign In</button>
-                    <div id="authError" class="text-sm text-rose-500 text-center hidden"></div>
-                </form>
-
-                <!-- Signup -->
-                <form id="signupForm" class="space-y-4 hidden">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700">Full Name</label>
-                        <input id="signupName" type="text" placeholder="Alexander Opoku Dwumaah" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition" required />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700">Email</label>
-                        <input id="signupEmail" type="email" placeholder="you@example.com" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition" required />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700">Password</label>
-                        <input id="signupPassword" type="password" placeholder="•••••••• (min 6 chars)" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition" required minlength="6" />
-                    </div>
-                    <button type="submit" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5">Create Account</button>
-                    <div id="signupError" class="text-sm text-rose-500 text-center hidden"></div>
-                </form>
-
-                <p class="text-xs text-slate-400 text-center mt-6">Secured with Supabase Auth</p>
-            </div>
+    <!-- ===== TAB: My Report ===== -->
+    <div id="tab-report" class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <div class="glass rounded-3xl p-5 sm:p-6 shadow-2xl border border-white/30">
+        <!-- Name + Dates -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">
+              <i class="fas fa-user mr-1 text-gold"></i> Name
+            </label>
+            <input id="userName" type="text" placeholder="e.g. Alexander Opoku Dwumaah"
+            class="w-full px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">
+              <i class="fas fa-calendar-week mr-1 text-gold"></i> Week Start
+            </label>
+            <input id="weekStart" type="date"
+            class="w-full px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">
+              <i class="fas fa-calendar-week mr-1 text-gold"></i> Week End
+            </label>
+            <input id="weekEnd" type="date"
+            class="w-full px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
+          </div>
         </div>
 
-        <!-- ─── MAIN APP (after login) ─── -->
-        <div id="mainApp" class="hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 min-h-screen">
-
-            <!-- Header -->
-            <header class="glass-dark sticky top-0 z-40 border-b border-white/20 shadow-xl">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-lg">MCI</div>
-                        <div>
-                            <h1 class="text-xl font-bold text-white tracking-tight">Weekly Report Portal</h1>
-                            <p class="text-xs text-indigo-200">Maintenance – Controls &amp; Instrumentations</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3 text-sm">
-                        <span class="text-indigo-200 hidden sm:inline">
-                            <i class="far fa-user mr-1"></i> <span id="headerUserName" class="font-medium text-white">—</span>
-                        </span>
-                        <button onclick="logout()" class="px-3 py-1.5 text-sm text-rose-300 hover:text-white hover:bg-rose-500/30 rounded-lg transition backdrop-blur-sm">
-                            <i class="fas fa-sign-out-alt mr-1"></i> Logout
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Navigation Tabs -->
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 flex flex-wrap gap-2 border-b border-slate-200/70 pb-3">
-                <div class="nav-tab active" data-tab="report" onclick="switchTab('report')">
-                    <i class="fas fa-pen-to-square mr-1.5"></i> My Report
-                </div>
-                <div class="nav-tab" data-tab="saved" onclick="switchTab('saved')">
-                    <i class="fas fa-folder-open mr-1.5"></i> Saved Reports
-                </div>
-                <div id="adminTab" class="nav-tab hidden" data-tab="admin" onclick="switchTab('admin')">
-                    <i class="fas fa-users-cog mr-1.5"></i> Admin Dashboard
-                </div>
+        <!-- Entry Form -->
+        <div class="bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-200/80 p-4 sm:p-5 mb-5 shadow-inner">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <i class="fas fa-plus-circle text-gold"></i> Add Entry
+            </h3>
+            <span class="text-xs font-medium text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm"># <span id="nextSerialDisplay">1</span></span>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Important Work <span class="text-rose-500">*</span></label>
+              <div class="relative">
+                <textarea id="inputImportant" rows="2" placeholder="Describe the important work performed…"
+                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm resize-y shadow-sm"></textarea>
+                <button onclick="paraphraseField('inputImportant')"
+                class="absolute bottom-2 right-2 text-xs bg-gold/20 hover:bg-gold/40 text-primary px-2.5 py-1 rounded-lg transition flex items-center gap-1 paraphrase-btn">
+                <i class="fas fa-wand-magic-sparkles"></i> Rewrite
+              </button>
             </div>
-
-            <!-- ===== TAB: My Report ===== -->
-            <div id="tab-report" class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-                <div class="glass rounded-3xl p-5 sm:p-6 shadow-2xl border border-white/30">
-                    <!-- Name + Dates -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-                        <div>
-                            <label class="block text-sm font-semibold text-slate-700 mb-1">
-                                <i class="fas fa-user mr-1 text-indigo-500"></i> Name
-                            </label>
-                            <input id="userName" type="text" placeholder="e.g. Alexander Opoku Dwumaah"
-                            class="w-full px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition text-sm shadow-sm" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-slate-700 mb-1">
-                                <i class="fas fa-calendar-week mr-1 text-indigo-500"></i> Week Start
-                            </label>
-                            <input id="weekStart" type="date"
-                            class="w-full px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition text-sm shadow-sm" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-slate-700 mb-1">
-                                <i class="fas fa-calendar-week mr-1 text-indigo-500"></i> Week End
-                            </label>
-                            <input id="weekEnd" type="date"
-                            class="w-full px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition text-sm shadow-sm" />
-                        </div>
-                    </div>
-
-                    <!-- Entry Form -->
-                    <div class="bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-200/80 p-4 sm:p-5 mb-5 shadow-inner">
-                        <div class="flex items-center justify-between mb-3">
-                            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <i class="fas fa-plus-circle text-indigo-500"></i> Add Entry
-                            </h3>
-                            <span class="text-xs font-medium text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm"># <span id="nextSerialDisplay">1</span></span>
-                        </div>
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Important Work <span class="text-rose-500">*</span></label>
-                                <div class="relative">
-                                    <textarea id="inputImportant" rows="2" placeholder="Describe the important work performed…"
-                                    class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition text-sm resize-y shadow-sm"></textarea>
-                                    <button onclick="paraphraseField('inputImportant')"
-                                    class="absolute bottom-2 right-2 text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2.5 py-1 rounded-lg transition flex items-center gap-1 paraphrase-btn">
-                                    <i class="fas fa-wand-magic-sparkles"></i> Rewrite
-                                </button>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">Completion, Process &amp; Results <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <textarea id="inputProcess" rows="2" placeholder="Describe completion, process and results…"
-                                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition text-sm resize-y shadow-sm"></textarea>
-                                <button onclick="paraphraseField('inputProcess')"
-                                class="absolute bottom-2 right-2 text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2.5 py-1 rounded-lg transition flex items-center gap-1 paraphrase-btn">
-                                <i class="fas fa-wand-magic-sparkles"></i> Rewrite
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Is it completed?</label>
-                        <select id="inputCompleted" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition text-sm shadow-sm">
-                            <option value="Yes">✅ Yes</option>
-                            <option value="No">❌ No</option>
-                            <option value="In Progress">⏳ In Progress</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Model Numbers (spare parts)</label>
-                        <input id="inputModels" type="text" placeholder="e.g. DS-1602ZJ, 57A241500"
-                        class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition text-sm shadow-sm" />
-                    </div>
-                </div>
-
-                <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-                    <button onclick="addEntry()" class="px-5 py-2.5 btn-primary text-white text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-2">
-                        <i class="fas fa-plus"></i> Add Entry
-                    </button>
-                    <div class="text-xs text-slate-600 flex items-center gap-3 bg-white/60 px-3 py-1.5 rounded-full shadow-sm">
-                        <span><i class="far fa-circle mr-1"></i> <span id="entryCountDisplay">0</span> entries</span>
-                        <span class="hidden sm:inline">|</span>
-                        <span class="hidden sm:inline"><i class="far fa-save mr-1"></i> <span id="saveStatus">Unsaved</span></span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Table -->
-            <div class="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-soft mt-6">
-                <table class="report-table w-full text-sm">
-                    <thead>
-                        <tr>
-                            <th class="w-14 text-center">#</th>
-                            <th class="min-w-[180px] text-left">Important Work</th>
-                            <th class="min-w-[220px] text-left">Completion, Process &amp; Results</th>
-                            <th class="w-32 text-center">Completed?</th>
-                            <th class="min-w-[150px] text-left">Model Numbers</th>
-                            <th class="w-12 text-center">✕</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody"></tbody>
-                </table>
-                <div id="emptyState" class="py-12 text-center text-slate-400 text-sm">
-                    <i class="fas fa-inbox text-4xl block mb-3 text-slate-300"></i>
-                    No entries yet. Add your first work item above.
-                </div>
-            </div>
-
-            <!-- Actions -->
-            <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-                <div class="flex flex-wrap gap-3">
-                    <button onclick="saveReport()" class="px-5 py-2.5 btn-success text-white text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-2">
-                        <i class="fas fa-cloud-upload-alt"></i> Save Report
-                    </button>
-                    <button onclick="exportPDF()" class="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white text-sm font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5 flex items-center gap-2">
-                        <i class="fas fa-file-pdf"></i> Export PDF
-                    </button>
-                    <button onclick="clearEntries()" class="px-4 py-2.5 btn-outline text-slate-600 text-sm font-semibold rounded-xl transition flex items-center gap-2">
-                        <i class="fas fa-trash-alt"></i> Clear All
-                    </button>
-                </div>
-                <div id="statusMsg" class="text-sm text-slate-600 flex items-center gap-2 bg-white/60 px-3 py-1.5 rounded-full shadow-sm">
-                    <i class="fas fa-info-circle text-indigo-400"></i> Ready
-                </div>
-            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Completion, Process &amp; Results <span class="text-rose-500">*</span></label>
+            <div class="relative">
+              <textarea id="inputProcess" rows="2" placeholder="Describe completion, process and results…"
+              class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm resize-y shadow-sm"></textarea>
+              <button onclick="paraphraseField('inputProcess')"
+              class="absolute bottom-2 right-2 text-xs bg-gold/20 hover:bg-gold/40 text-primary px-2.5 py-1 rounded-lg transition flex items-center gap-1 paraphrase-btn">
+              <i class="fas fa-wand-magic-sparkles"></i> Rewrite
+            </button>
+          </div>
         </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Is it completed?</label>
+          <select id="inputCompleted" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm">
+            <option value="Yes">✅ Yes</option>
+            <option value="No">❌ No</option>
+            <option value="In Progress">⏳ In Progress</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Model Numbers (spare parts)</label>
+          <input id="inputModels" type="text" placeholder="e.g. DS-1602ZJ, 57A241500"
+          class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
+        </div>
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <button onclick="addEntry()" class="px-5 py-2.5 btn-primary text-white text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-2">
+          <i class="fas fa-plus"></i> Add Entry
+        </button>
+        <div class="text-xs text-slate-600 flex items-center gap-3 bg-white/60 px-3 py-1.5 rounded-full shadow-sm">
+          <span><i class="far fa-circle mr-1"></i> <span id="entryCountDisplay">0</span> entries</span>
+          <span class="hidden sm:inline">|</span>
+          <span class="hidden sm:inline"><i class="far fa-save mr-1"></i> <span id="saveStatus">Unsaved</span></span>
+        </div>
+      </div>
     </div>
 
-    <!-- ===== TAB: Saved Reports ===== -->
-    <div id="tab-saved" class="max-w-7xl mx-auto px-4 sm:px-6 py-6 hidden">
-        <div class="glass rounded-3xl p-5 shadow-2xl border border-white/30">
-            <h2 class="text-xl font-bold text-slate-800 mb-4"><i class="fas fa-folder-open mr-2 text-indigo-500"></i>Your Saved Reports</h2>
-            <div id="savedList" class="space-y-2">
-                <p class="text-slate-400 text-sm">Loading your reports…</p>
-            </div>
-        </div>
+    <!-- Table -->
+    <div class="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-soft mt-6">
+      <table class="report-table w-full text-sm">
+        <thead>
+          <tr>
+            <th class="w-14 text-center">#</th>
+            <th class="min-w-[180px] text-left">Important Work</th>
+            <th class="min-w-[220px] text-left">Completion, Process &amp; Results</th>
+            <th class="w-32 text-center">Completed?</th>
+            <th class="min-w-[150px] text-left">Model Numbers</th>
+            <th class="w-12 text-center">✕</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div id="emptyState" class="py-12 text-center text-slate-400 text-sm">
+        <i class="fas fa-inbox text-4xl block mb-3 text-slate-300"></i>
+        No entries yet. Add your first work item above.
+      </div>
     </div>
 
-    <!-- ===== TAB: Admin Dashboard ===== -->
-    <div id="tab-admin" class="max-w-7xl mx-auto px-4 sm:px-6 py-6 hidden">
-        <div class="glass rounded-3xl p-5 shadow-2xl border border-white/30">
-            <h2 class="text-xl font-bold text-slate-800 mb-4"><i class="fas fa-users-cog mr-2 text-indigo-500"></i>Admin Dashboard – All Reports</h2>
-            <div id="adminReportsList" class="overflow-x-auto">
-                <p class="text-slate-400 text-sm">Loading all reports…</p>
-            </div>
-        </div>
+    <!-- Actions -->
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap gap-3">
+        <button onclick="saveReport()" class="px-5 py-2.5 btn-gold text-primary text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-2">
+          <i class="fas fa-cloud-upload-alt"></i> Save Report
+        </button>
+        <button onclick="exportPDF()" class="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white text-sm font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5 flex items-center gap-2">
+          <i class="fas fa-file-pdf"></i> Export PDF
+        </button>
+        <button onclick="clearEntries()" class="px-4 py-2.5 btn-outline text-sm font-semibold rounded-xl transition flex items-center gap-2">
+          <i class="fas fa-trash-alt"></i> Clear All
+        </button>
+      </div>
+      <div id="statusMsg" class="text-sm text-slate-600 flex items-center gap-2 bg-white/60 px-3 py-1.5 rounded-full shadow-sm">
+        <i class="fas fa-info-circle text-gold"></i> Ready
+      </div>
     </div>
+  </div>
+</div>
+
+<!-- ===== TAB: Saved Reports ===== -->
+<div id="tab-saved" class="max-w-7xl mx-auto px-4 sm:px-6 py-6 hidden">
+  <div class="glass rounded-3xl p-5 shadow-2xl border border-white/30">
+    <h2 class="text-xl font-bold text-slate-800 mb-4"><i class="fas fa-folder-open mr-2 text-gold"></i>Your Saved Reports</h2>
+    <div id="savedList" class="space-y-2">
+      <p class="text-slate-400 text-sm">Loading your reports…</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB: Admin Dashboard ===== -->
+<div id="tab-admin" class="max-w-7xl mx-auto px-4 sm:px-6 py-6 hidden">
+  <div class="glass rounded-3xl p-5 shadow-2xl border border-white/30">
+    <h2 class="text-xl font-bold text-slate-800 mb-4"><i class="fas fa-users-cog mr-2 text-gold"></i>Admin Dashboard – All Reports</h2>
+    <div id="adminReportsList" class="overflow-x-auto">
+      <p class="text-slate-400 text-sm">Loading all reports…</p>
+    </div>
+  </div>
+</div>
 
 </div> <!-- end mainApp -->
 
-<!-- ===== PDF CONTAINER (hidden) ===== -->
+<!-- ===== PDF CONTAINER ===== -->
 <div id="pdfContainer" style="display:none;">
-    <div id="pdfContent" style="padding:40px 32px; background:white; font-family:'Segoe UI',Arial,sans-serif;">
-        <div style="text-align:center; border-bottom:2px solid #1e293b; padding-bottom:16px; margin-bottom:20px;">
-            <div style="font-size:24px; font-weight:700; color:#0f172a;">2026 Individual Weekly Summary</div>
-            <div style="font-size:18px; font-weight:600; color:#334155; margin-top:2px;">Weekly Summary</div>
-            <div style="font-size:14px; color:#475569; margin-top:6px;">
-                Name: <span id="pdfName" style="font-weight:600; color:#0f172a;">—</span>
-                &nbsp;&nbsp;|&nbsp;&nbsp;
-                Week: <span id="pdfWeekRange" style="font-weight:600; color:#0f172a;">—</span>
-            </div>
-        </div>
-        <table class="pdf-preview-table" style="width:100%; border-collapse:collapse; font-size:10px;">
-            <thead>
-                <tr>
-                    <th style="width:8%;">Seria I Number</th>
-                    <th style="width:26%;">Important Work</th>
-                    <th style="width:30%;">Completion, Process And Results</th>
-                    <th style="width:14%;">Is it completed?</th>
-                    <th style="width:22%;">Detailed Model Numbers Of The Spare Parts Used</th>
-                </tr>
-            </thead>
-            <tbody id="pdfTableBody"></tbody>
-        </table>
-        <div style="margin-top:20px; border-top:1px solid #e2e8f0; padding-top:12px; display:flex; justify-content:space-between; font-size:9px; color:#94a3b8;">
-            <span>Generated: <span id="pdfGenDate">—</span></span>
-            <span>Maintenance – Controls &amp; Instrumentations</span>
-        </div>
+  <div id="pdfContent" style="padding:40px 32px; background:white; font-family:'Segoe UI',Arial,sans-serif;">
+    <div style="text-align:center; border-bottom:2px solid #0a2540; padding-bottom:12px; margin-bottom:16px;">
+      <div style="font-size:22px; font-weight:700; color:#0a2540; letter-spacing:1px;">2026 Individual Weekly Summary</div>
+      <div style="font-size:18px; font-weight:600; color:#1a3a5c; margin-top:2px;">Weekly Summary</div>
+      <div style="font-size:14px; color:#475569; margin-top:6px;">
+        <strong>Name:</strong> <span id="pdfName" style="font-weight:600; color:#0a2540;">—</span>
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <strong>Date:</strong> <span id="pdfDateRange" style="font-weight:600; color:#0a2540;">—</span>
+      </div>
     </div>
+    <table class="pdf-preview-table" style="width:100%; border-collapse:collapse; font-size:10px;">
+      <thead>
+        <tr>
+          <th style="width:8%;">Seria I Number</th>
+          <th style="width:26%;">Important Work</th>
+          <th style="width:30%;">Completion, Process And Results</th>
+          <th style="width:14%;">Is it completed?</th>
+          <th style="width:22%;">Detailed Model Numbers Of The Spare Parts Used</th>
+        </tr>
+      </thead>
+      <tbody id="pdfTableBody"></tbody>
+    </table>
+    <div style="margin-top:16px; border-top:1px solid #e2e8f0; padding-top:10px; display:flex; justify-content:space-between; font-size:9px; color:#94a3b8;">
+      <span>Generated: <span id="pdfGenDate">—</span></span>
+      <span>Sunon Asogli Power Ghana – Maintenance</span>
+    </div>
+  </div>
 </div>
 
 </div> <!-- end app -->
 
 <!-- ============================================================ -->
-<!-- ===== JAVASCRIPT (unchanged – full functionality) ===== -->
+<!-- ===== JAVASCRIPT (full functionality) ===== -->
 <script>
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  SUPABASE CONFIG – your credentials
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const SUPABASE_URL = 'https://dnhdyyvleloypnbbknay.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuaGR5eXZsZWxveXBuYmJrbmF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDMxMjksImV4cCI6MjA5ODA3OTEyOX0.XeVjT_DBKIMg-1Jd8V7IMwTsiZZB86QIW3dB-R1QjQY';
-    const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  SUPABASE CONFIG – your credentials
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const SUPABASE_URL = 'https://dnhdyyvleloypnbbknay.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuaGR5eXZsZWxveXBuYmJrbmF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDMxMjksImV4cCI6MjA5ODA3OTEyOX0.XeVjT_DBKIMg-1Jd8V7IMwTsiZZB86QIW3dB-R1QjQY';
+  const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  STATE
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    let entries = [];
-    let nextSerial = 1;
-    let currentUser = null;
-    let currentReportId = null;
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  STATE
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  let entries = [];
+  let nextSerial = 1;
+  let currentUser = null;
+  let currentReportId = null;
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  DOM REFS
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const $ = (id) => document.getElementById(id);
-    const userName = $('userName');
-    const weekStart = $('weekStart');
-    const weekEnd = $('weekEnd');
-    const inputImportant = $('inputImportant');
-    const inputProcess = $('inputProcess');
-    const inputCompleted = $('inputCompleted');
-    const inputModels = $('inputModels');
-    const tableBody = $('tableBody');
-    const emptyState = $('emptyState');
-    const nextSerialDisplay = $('nextSerialDisplay');
-    const entryCountDisplay = $('entryCountDisplay');
-    const statusMsg = $('statusMsg');
-    const saveStatus = $('saveStatus');
-    const headerUserName = $('headerUserName');
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  DOM REFS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const $ = id => document.getElementById(id);
+  const userName = $('userName');
+  const weekStart = $('weekStart');
+  const weekEnd = $('weekEnd');
+  const inputImportant = $('inputImportant');
+  const inputProcess = $('inputProcess');
+  const inputCompleted = $('inputCompleted');
+  const inputModels = $('inputModels');
+  const tableBody = $('tableBody');
+  const emptyState = $('emptyState');
+  const nextSerialDisplay = $('nextSerialDisplay');
+  const entryCountDisplay = $('entryCountDisplay');
+  const statusMsg = $('statusMsg');
+  const saveStatus = $('saveStatus');
+  const headerUserName = $('headerUserName');
 
-    // Auth
-    const authPage = $('authPage');
-    const mainApp = $('mainApp');
-    const loginForm = $('loginForm');
-    const signupForm = $('signupForm');
-    const loginTab = $('loginTab');
-    const signupTab = $('signupTab');
-    const authError = $('authError');
-    const signupError = $('signupError');
-    const loginEmail = $('loginEmail');
-    const loginPassword = $('loginPassword');
-    const signupName = $('signupName');
-    const signupEmail = $('signupEmail');
-    const signupPassword = $('signupPassword');
+  // Auth
+  const authPage = $('authPage');
+  const mainApp = $('mainApp');
+  const loginFormContainer = $('loginFormContainer');
+  const signupFormContainer = $('signupFormContainer');
+  const loginForm = $('loginForm');
+  const signupForm = $('signupForm');
+  const authLoginTab = $('authLoginTab');
+  const authSignupTab = $('authSignupTab');
+  const authError = $('authError');
+  const signupError = $('signupError');
+  const loginEmail = $('loginEmail');
+  const loginPassword = $('loginPassword');
+  const signupName = $('signupName');
+  const signupEmail = $('signupEmail');
+  const signupPassword = $('signupPassword');
 
-    // Tabs
-    const tabReport = $('tab-report');
-    const tabSaved = $('tab-saved');
-    const tabAdmin = $('tab-admin');
-    const adminTab = $('adminTab');
-    const savedList = $('savedList');
-    const adminReportsList = $('adminReportsList');
+  // Tabs
+  const tabReport = $('tab-report');
+  const tabSaved = $('tab-saved');
+  const tabAdmin = $('tab-admin');
+  const adminTab = $('adminTab');
+  const savedList = $('savedList');
+  const adminReportsList = $('adminReportsList');
 
-    // PDF
-    const pdfName = $('pdfName');
-    const pdfWeekRange = $('pdfWeekRange');
-    const pdfTableBody = $('pdfTableBody');
-    const pdfGenDate = $('pdfGenDate');
+  // PDF
+  const pdfName = $('pdfName');
+  const pdfDateRange = $('pdfDateRange');
+  const pdfTableBody = $('pdfTableBody');
+  const pdfGenDate = $('pdfGenDate');
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  AUTH (same as before)
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    loginTab.addEventListener('click', () => {
-        loginTab.className = 'flex-1 py-2.5 text-sm font-semibold rounded-xl text-white bg-indigo-600 transition shadow-sm';
-        signupTab.className = 'flex-1 py-2.5 text-sm font-semibold rounded-xl text-slate-600 hover:bg-slate-200 transition';
-        loginForm.classList.remove('hidden');
-        signupForm.classList.add('hidden');
-        authError.classList.add('hidden');
-        signupError.classList.add('hidden');
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  AUTH – TAB SWITCHING
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function switchAuthTab(tab) {
+    if (tab === 'login') {
+      authLoginTab.className = 'auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
+      authSignupTab.className = 'auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
+      loginFormContainer.classList.remove('hidden');
+      signupFormContainer.classList.add('hidden');
+      authError.classList.add('hidden');
+      signupError.classList.add('hidden');
+    } else {
+      authSignupTab.className = 'auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
+      authLoginTab.className = 'auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
+      signupFormContainer.classList.remove('hidden');
+      loginFormContainer.classList.add('hidden');
+      authError.classList.add('hidden');
+      signupError.classList.add('hidden');
+    }
+  }
+
+  authLoginTab.addEventListener('click', () => switchAuthTab('login'));
+  authSignupTab.addEventListener('click', () => switchAuthTab('signup'));
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  AUTH – LOGIN
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    authError.classList.add('hidden');
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value;
+    if (!email || !password) {
+      authError.textContent = 'Please fill in all fields.';
+      authError.classList.remove('hidden');
+      return;
+    }
+    showLoader(true);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    showLoader(false);
+    if (error) {
+      authError.textContent = error.message;
+      authError.classList.remove('hidden');
+      return;
+    }
+    await onAuthSuccess(data.user);
+  });
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  AUTH – SIGNUP
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  signupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    signupError.classList.add('hidden');
+    const name = signupName.value.trim();
+    const email = signupEmail.value.trim();
+    const password = signupPassword.value;
+
+    if (!name || !email || password.length < 6) {
+      signupError.textContent = 'Please fill all fields (password ≥ 6 chars).';
+      signupError.classList.remove('hidden');
+      return;
+    }
+
+    showLoader(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name } }
     });
-    signupTab.addEventListener('click', () => {
-        signupTab.className = 'flex-1 py-2.5 text-sm font-semibold rounded-xl text-white bg-indigo-600 transition shadow-sm';
-        loginTab.className = 'flex-1 py-2.5 text-sm font-semibold rounded-xl text-slate-600 hover:bg-slate-200 transition';
-        signupForm.classList.remove('hidden');
-        loginForm.classList.add('hidden');
-        authError.classList.add('hidden');
-        signupError.classList.add('hidden');
-    });
+    showLoader(false);
 
-    loginForm.addEventListener('submit', async (e) => {
+    if (error) {
+      signupError.textContent = error.message;
+      signupError.classList.remove('hidden');
+      return;
+    }
+
+    if (data.user) {
+      if (data.user.identities && data.user.identities.length === 0) {
+        signupError.textContent = 'This email is already registered. Please login.';
+        signupError.classList.remove('hidden');
+        return;
+      }
+      await onAuthSuccess(data.user);
+    }
+  });
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  AUTH – SUCCESS HANDLER
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function onAuthSuccess(user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    let role = 'user';
+    if (!profile) {
+      await supabase
+        .from('profiles')
+        .insert({ id: user.id, username: user.user_metadata?.full_name || user.email, role: 'user' });
+    } else {
+      role = profile.role || 'user';
+    }
+
+    currentUser = { id: user.id, email: user.email, role };
+    headerUserName.textContent = user.user_metadata?.full_name || user.email;
+
+    if (role === 'admin') adminTab.classList.remove('hidden');
+    else adminTab.classList.add('hidden');
+
+    authPage.classList.add('hidden');
+    mainApp.classList.remove('hidden');
+    setDefaultWeek();
+    resetFormState();
+    await loadSavedReports();
+    switchTab('report');
+    setStatus('Welcome! Create or load a report.');
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  LOGOUT
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function logout() {
+    if (!confirm('Logout?')) return;
+    await supabase.auth.signOut();
+    currentUser = null;
+    entries = [];
+    currentReportId = null;
+    mainApp.classList.add('hidden');
+    authPage.classList.remove('hidden');
+    loginForm.reset();
+    signupForm.reset();
+    authError.classList.add('hidden');
+    signupError.classList.add('hidden');
+    switchAuthTab('login');
+    setStatus('Logged out.');
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  LOADER
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function showLoader(show) {
+    const el = $('loader');
+    if (show) el.classList.remove('hidden');
+    else el.classList.add('hidden');
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  TAB SWITCHING
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function switchTab(tab) {
+    document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.classList.add('active');
+    tabReport.classList.add('hidden');
+    tabSaved.classList.add('hidden');
+    tabAdmin.classList.add('hidden');
+    if (tab === 'report') tabReport.classList.remove('hidden');
+    else if (tab === 'saved') { tabSaved.classList.remove('hidden'); loadSavedReports(); }
+    else if (tab === 'admin') { tabAdmin.classList.remove('hidden'); loadAdminReports(); }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  DATE HELPERS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function formatDate(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function formatDateWithSuffix(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = d.getDate();
+    const suffix = day + (day % 10 === 1 && day !== 11 ? 'st' :
+                         day % 10 === 2 && day !== 12 ? 'nd' :
+                         day % 10 === 3 && day !== 13 ? 'rd' : 'th');
+    const month = d.toLocaleDateString('en-US', { month: 'long' });
+    const year = d.getFullYear();
+    return `${month} ${suffix}, ${year}`;
+  }
+
+  function setDefaultWeek() {
+    const now = new Date();
+    const day = now.getDay();
+    const diffToMon = (day === 0 ? 6 : day - 1);
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - diffToMon);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const fmt = d => d.toISOString().slice(0,10);
+    if (!weekStart.value) weekStart.value = fmt(monday);
+    if (!weekEnd.value) weekEnd.value = fmt(sunday);
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  RENDER TABLE
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function renderTable() {
+    if (entries.length === 0) {
+      tableBody.innerHTML = '';
+      emptyState.style.display = 'block';
+      entryCountDisplay.textContent = '0';
+      nextSerialDisplay.textContent = '1';
+      return;
+    }
+    emptyState.style.display = 'none';
+    entryCountDisplay.textContent = entries.length;
+    nextSerialDisplay.textContent = entries.length + 1;
+
+    let html = '';
+    entries.forEach((e, idx) => {
+      const badge = e.completed === 'Yes' ? 'bg-emerald-100 text-emerald-700' :
+                    e.completed === 'No' ? 'bg-rose-100 text-rose-700' :
+                    'bg-amber-100 text-amber-700';
+      html += `
+        <tr class="fade-in">
+          <td class="text-center font-medium text-slate-500">${e.serial}</td>
+          <td class="whitespace-pre-wrap">${escapeHtml(e.important)}</td>
+          <td class="whitespace-pre-wrap">${escapeHtml(e.process)}</td>
+          <td class="text-center">
+            <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${badge}">${e.completed}</span>
+          </td>
+          <td class="text-sm">${escapeHtml(e.models || '—')}</td>
+          <td class="text-center">
+            <button onclick="removeEntry(${idx})" class="text-slate-300 hover:text-rose-500 transition text-sm">
+              <i class="fas fa-times"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    tableBody.innerHTML = html;
+    updateSaveStatus();
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  ENTRIES CRUD
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function addEntry() {
+    const important = inputImportant.value.trim();
+    const process = inputProcess.value.trim();
+    if (!important || !process) {
+      setStatus('Please fill "Important Work" and "Completion, Process & Results".', true);
+      inputImportant.focus();
+      return;
+    }
+    entries.push({
+      serial: nextSerial++,
+      important,
+      process,
+      completed: inputCompleted.value,
+      models: inputModels.value.trim()
+    });
+    inputImportant.value = '';
+    inputProcess.value = '';
+    inputModels.value = '';
+    inputImportant.focus();
+    renderTable();
+    setStatus(`Entry #${nextSerial - 1} added.`);
+  }
+
+  function removeEntry(idx) {
+    if (!confirm('Remove this entry?')) return;
+    entries.splice(idx, 1);
+    entries.forEach((e, i) => e.serial = i + 1);
+    nextSerial = entries.length + 1;
+    renderTable();
+    setStatus('Entry removed.');
+  }
+
+  function clearEntries() {
+    if (entries.length === 0) return;
+    if (!confirm('Remove all entries?')) return;
+    entries = [];
+    nextSerial = 1;
+    renderTable();
+    setStatus('All entries cleared.');
+  }
+
+  function resetFormState() {
+    entries = [];
+    nextSerial = 1;
+    currentReportId = null;
+    renderTable();
+    userName.value = '';
+    weekStart.value = '';
+    weekEnd.value = '';
+    setDefaultWeek();
+    saveStatus.textContent = 'Unsaved';
+  }
+
+  function updateSaveStatus() {
+    saveStatus.textContent = currentReportId ? 'Saved (remote)' : 'Unsaved';
+  }
+
+  function setStatus(msg, isError = false) {
+    statusMsg.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle text-amber-500' : 'fa-check-circle text-emerald-500'}"></i> ${msg}`;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  AI PARAPHRASE (unchanged)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function paraphraseField(textareaId) {
+    const el = $(textareaId);
+    const text = el.value.trim();
+    if (!text) { setStatus('Please enter some text to rewrite.', true); el.focus(); return; }
+    el.disabled = true;
+    setStatus('⏳ Rewriting with AI …');
+    try {
+      const result = await callParaphraseAPI(text);
+      if (result) { el.value = result; setStatus('✅ Rewritten successfully.'); }
+      else { setStatus('⚠️ Could not rewrite.', true); }
+    } catch (err) { setStatus('⚠️ Error: ' + err.message, true); }
+    finally { el.disabled = false; el.focus(); }
+  }
+
+  async function callParaphraseAPI(text) {
+    const MODEL = 'google/flan-t5-base';
+    const API_URL = `https://api-inference.huggingface.co/models/${MODEL}`;
+    const prompt = `Rewrite this technical work report text in a more professional, clear, and detailed way. Keep the meaning exactly the same but improve the language. Make it concise yet thorough. Here is the text:\n\n"${text}"\n\nRewritten version:`;
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inputs: prompt, parameters: { max_length: 300, temperature: 0.7, do_sample: true } })
+      });
+      if (!response.ok) return fallbackParaphrase(text);
+      const data = await response.json();
+      if (data && data.generated_text) {
+        let result = data.generated_text;
+        const idx = result.indexOf('Rewritten version:');
+        if (idx !== -1) result = result.slice(idx + 18).trim();
+        result = result.replace(/^["']|["']$/g, '').trim();
+        if (result.length > 10) return result;
+      }
+      return fallbackParaphrase(text);
+    } catch (_) { return fallbackParaphrase(text); }
+  }
+
+  function fallbackParaphrase(text) {
+    const replacements = {
+      'fix': 'rectify', 'fixing': 'rectifying',
+      'check': 'inspect', 'checking': 'inspecting',
+      'put': 'install', 'putting': 'installing',
+      'get': 'obtain', 'getting': 'obtaining',
+      'make': 'perform', 'making': 'performing',
+      'do': 'execute', 'doing': 'executing',
+      'change': 'replace', 'changing': 'replacing',
+      'setup': 'configure', 'set up': 'configure',
+      'setting up': 'configuring',
+      'take': 'remove', 'taking': 'removing',
+      'look': 'examine', 'looking': 'examining',
+      'good': 'satisfactory', 'ok': 'operational',
+      'okay': 'operational', 'fine': 'functional',
+      'working': 'operational', 'work': 'operation',
+    };
+    let result = text;
+    for (const [key, val] of Object.entries(replacements)) {
+      const regex = new RegExp('\\b' + key + '\\b', 'gi');
+      result = result.replace(regex, val);
+    }
+    result = result.charAt(0).toUpperCase() + result.slice(1);
+    if (!result.endsWith('.') && !result.endsWith('!') && !result.endsWith('?')) result += '.';
+    return result;
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  SAVE / LOAD / DELETE (Supabase) – unchanged logic
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function saveReport() {
+    if (!currentUser) { setStatus('Not logged in.', true); return; }
+    const name = userName.value.trim();
+    const start = weekStart.value;
+    const end = weekEnd.value;
+    if (!name) { setStatus('Please enter your name.', true); userName.focus(); return; }
+    if (!start || !end) { setStatus('Please select a week range.', true); weekStart.focus(); return; }
+    if (entries.length === 0) { setStatus('Add at least one entry.', true); return; }
+
+    showLoader(true);
+    try {
+      const payload = { user_id: currentUser.id, user_name: name, week_start: start, week_end: end, entries };
+      let result;
+      if (currentReportId) {
+        result = await supabase.from('reports').update(payload).eq('id', currentReportId).eq('user_id', currentUser.id);
+      } else {
+        result = await supabase.from('reports').insert([payload]).select('id').single();
+      }
+      if (result.error) throw result.error;
+      if (!currentReportId && result.data) currentReportId = result.data.id;
+      saveStatus.textContent = 'Saved (remote)';
+      setStatus('Report saved successfully.');
+      await loadSavedReports();
+    } catch (err) {
+      setStatus('Save error: ' + err.message, true);
+    } finally { showLoader(false); }
+  }
+
+  async function loadSavedReports() {
+    if (!currentUser) return;
+    showLoader(true);
+    try {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('id, user_name, week_start, week_end, created_at')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        savedList.innerHTML = `<p class="text-slate-400 text-sm"><i class="fas fa-info-circle mr-1"></i>No saved reports yet.</p>`;
+      } else {
+        let html = `<div class="space-y-2">`;
+        data.forEach(r => {
+          html += `
+            <div class="flex items-center justify-between p-3 bg-white/70 backdrop-blur-sm rounded-xl border border-slate-200/80 hover:border-gold transition shadow-sm">
+              <div>
+                <span class="font-semibold text-slate-700">${escapeHtml(r.user_name)}</span>
+                <span class="text-sm text-slate-500 ml-2">${formatDate(r.week_start)} – ${formatDate(r.week_end)}</span>
+                <span class="text-xs text-slate-400 ml-2">${new Date(r.created_at).toLocaleDateString()}</span>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="loadReport('${r.id}')" class="text-gold hover:text-gold/70 text-sm font-medium"><i class="fas fa-folder-open"></i> Load</button>
+                <button onclick="deleteReport('${r.id}')" class="text-rose-500 hover:text-rose-700 text-sm font-medium"><i class="fas fa-trash"></i></button>
+              </div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+        savedList.innerHTML = html;
+      }
+    } catch (err) {
+      savedList.innerHTML = `<p class="text-rose-500 text-sm">Error loading reports.</p>`;
+      console.error(err);
+    } finally { showLoader(false); }
+  }
+
+  async function loadReport(reportId) {
+    showLoader(true);
+    try {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('*')
+        .eq('id', reportId)
+        .eq('user_id', currentUser.id)
+        .single();
+      if (error) throw error;
+      if (!data) { setStatus('Report not found.', true); return; }
+      userName.value = data.user_name || '';
+      weekStart.value = data.week_start || '';
+      weekEnd.value = data.week_end || '';
+      entries = data.entries || [];
+      entries.forEach((e, i) => e.serial = i + 1);
+      nextSerial = entries.length + 1;
+      currentReportId = data.id;
+      renderTable();
+      saveStatus.textContent = 'Loaded from cloud';
+      setStatus(`Loaded report from ${formatDate(data.week_start)} – ${formatDate(data.week_end)}`);
+      switchTab('report');
+    } catch (err) {
+      setStatus('Load error: ' + err.message, true);
+    } finally { showLoader(false); }
+  }
+
+  async function deleteReport(reportId) {
+    if (!confirm('Delete this report permanently?')) return;
+    showLoader(true);
+    try {
+      const { error } = await supabase.from('reports').delete().eq('id', reportId).eq('user_id', currentUser.id);
+      if (error) throw error;
+      setStatus('Report deleted.');
+      await loadSavedReports();
+      if (currentReportId === reportId) { resetFormState(); switchTab('report'); }
+    } catch (err) {
+      setStatus('Delete error: ' + err.message, true);
+    } finally { showLoader(false); }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  ADMIN DASHBOARD
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async function loadAdminReports() {
+    if (!currentUser || currentUser.role !== 'admin') {
+      adminReportsList.innerHTML = `<p class="text-rose-500">Access denied.</p>`;
+      return;
+    }
+    showLoader(true);
+    try {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('id, user_id, user_name, week_start, week_end, entries, created_at')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        adminReportsList.innerHTML = `<p class="text-slate-400">No reports found.</p>`;
+      } else {
+        let html = `<table class="w-full text-sm border-collapse">
+          <thead><tr class="bg-primary text-gold">
+            <th class="p-2 border border-primary font-semibold">User</th>
+            <th class="p-2 border border-primary font-semibold">Week</th>
+            <th class="p-2 border border-primary font-semibold text-center">Entries</th>
+            <th class="p-2 border border-primary font-semibold">Date</th>
+            <th class="p-2 border border-primary font-semibold">Action</th>
+          </tr></thead><tbody>`;
+        data.forEach(r => {
+          const entryCount = (r.entries || []).length;
+          html += `<tr class="border-b hover:bg-indigo-50/50 transition">
+            <td class="p-2 border border-slate-200">${escapeHtml(r.user_name)}</td>
+            <td class="p-2 border border-slate-200">${formatDate(r.week_start)} – ${formatDate(r.week_end)}</td>
+            <td class="p-2 border border-slate-200 text-center font-medium">${entryCount}</td>
+            <td class="p-2 border border-slate-200">${new Date(r.created_at).toLocaleDateString()}</td>
+            <td class="p-2 border border-slate-200">
+              <button onclick="viewAdminReport('${r.id}')" class="text-gold hover:underline text-xs font-medium">View</button>
+            </td>
+          </tr>`;
+        });
+        html += `</tbody></table>`;
+        adminReportsList.innerHTML = html;
+      }
+    } catch (err) {
+      adminReportsList.innerHTML = `<p class="text-rose-500">Error: ${err.message}</p>`;
+    } finally { showLoader(false); }
+  }
+
+  async function viewAdminReport(reportId) {
+    showLoader(true);
+    try {
+      const { data, error } = await supabase.from('reports').select('*').eq('id', reportId).single();
+      if (error) throw error;
+      if (!data) { alert('Report not found.'); return; }
+      const entriesText = (data.entries || []).map((e, i) => `${i+1}. ${e.important} (${e.completed})`).join('\n');
+      alert(`Report by ${data.user_name}\nWeek: ${formatDate(data.week_start)} – ${formatDate(data.week_end)}\nEntries:\n${entriesText || 'None'}`);
+    } catch (err) {
+      alert('Error loading report.');
+    } finally { showLoader(false); }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  EXPORT PDF – NEW FORMAT
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function exportPDF() {
+    if (entries.length === 0) {
+      setStatus('No entries to export.', true);
+      return;
+    }
+    const name = userName.value.trim() || '—';
+    const start = weekStart.value;
+    const end = weekEnd.value;
+    const dateRange = start && end ? `${formatDateWithSuffix(start)} – ${formatDateWithSuffix(end)}` : '—';
+
+    pdfName.textContent = name;
+    pdfDateRange.textContent = dateRange;
+    pdfGenDate.textContent = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+
+    let html = '';
+    entries.forEach(e => {
+      html += `
+        <tr>
+          <td style="text-align:center; padding:6px 4px; border:1px solid #cbd5e1;">${e.serial}</td>
+          <td style="padding:6px 4px; border:1px solid #cbd5e1;">${escapeHtml(e.important)}</td>
+          <td style="padding:6px 4px; border:1px solid #cbd5e1;">${escapeHtml(e.process)}</td>
+          <td style="text-align:center; padding:6px 4px; border:1px solid #cbd5e1;">${e.completed}</td>
+          <td style="padding:6px 4px; border:1px solid #cbd5e1;">${escapeHtml(e.models || '—')}</td>
+        </tr>
+      `;
+    });
+    pdfTableBody.innerHTML = html;
+
+    const container = $('pdfContainer');
+    container.style.display = 'block';
+    setStatus('⏳ Generating PDF …');
+    const element = $('pdfContent');
+    const opt = {
+      margin: [0.5, 0.5, 0.5, 0.5],
+      filename: `Weekly_Report_${name.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0, windowHeight: element.scrollHeight },
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+    html2pdf().set(opt).from(element).save().then(() => {
+      container.style.display = 'none';
+      setStatus('✅ PDF downloaded.');
+    }).catch(err => {
+      container.style.display = 'none';
+      setStatus('❌ PDF error: ' + err.message, true);
+    });
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  KEYBOARD SHORTCUTS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); addEntry(); }
+    if (e.key === 'Tab') {
+      const active = document.activeElement;
+      if (active && (active.id === 'inputImportant' || active.id === 'inputProcess')) {
         e.preventDefault();
-        authError.classList.add('hidden');
-        const email = loginEmail.value.trim();
-        const password = loginPassword.value;
-        if (!email || !password) { showAuthError('Please fill in all fields.'); return; }
-        showLoader(true);
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        showLoader(false);
-        if (error) { showAuthError(error.message); return; }
-        await onAuthSuccess(data.user);
-    });
-
-    signupForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        signupError.classList.add('hidden');
-        const name = signupName.value.trim();
-        const email = signupEmail.value.trim();
-        const password = signupPassword.value;
-        if (!name || !email || password.length < 6) {
-            signupError.textContent = 'Please fill all fields (password ≥ 6 chars).';
-            signupError.classList.remove('hidden');
-            return;
-        }
-        showLoader(true);
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: { data: { full_name: name } }
-        });
-        showLoader(false);
-        if (error) { signupError.textContent = error.message;
-            signupError.classList.remove('hidden'); return; }
-        if (data.user) await onAuthSuccess(data.user);
-    });
-
-    async function onAuthSuccess(user) {
-        const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .maybeSingle();
-
-        let role = 'user';
-        if (!profile) {
-            const { error: insertError } = await supabase
-                .from('profiles')
-                .insert({ id: user.id, username: user.user_metadata?.full_name || user.email, role: 'user' });
-            if (insertError) console.error('Profile insert error:', insertError);
-        } else {
-            role = profile.role || 'user';
-        }
-
-        currentUser = { id: user.id, email: user.email, role };
-        headerUserName.textContent = user.user_metadata?.full_name || user.email;
-
-        if (role === 'admin') adminTab.classList.remove('hidden');
-        else adminTab.classList.add('hidden');
-
-        authPage.classList.add('hidden');
-        mainApp.classList.remove('hidden');
-        setDefaultWeek();
-        resetFormState();
-        await loadSavedReports();
-        switchTab('report');
-        setStatus('Welcome! Create or load a report.');
+        paraphraseField(active.id);
+      }
     }
+  });
 
-    function showAuthError(msg) {
-        authError.textContent = msg;
-        authError.classList.remove('hidden');
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  INIT
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  (async function init() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      await onAuthSuccess(session.user);
+    } else {
+      authPage.classList.remove('hidden');
+      mainApp.classList.add('hidden');
+      switchAuthTab('login');
     }
+  })();
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  LOGOUT
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    async function logout() {
-        if (!confirm('Logout?')) return;
-        await supabase.auth.signOut();
-        currentUser = null;
-        entries = [];
-        currentReportId = null;
-        mainApp.classList.add('hidden');
-        authPage.classList.remove('hidden');
-        loginForm.reset();
-        signupForm.reset();
-        authError.classList.add('hidden');
-        signupError.classList.add('hidden');
-        setStatus('Logged out.');
-    }
+  // Expose globals
+  window.addEntry = addEntry;
+  window.removeEntry = removeEntry;
+  window.clearEntries = clearEntries;
+  window.saveReport = saveReport;
+  window.exportPDF = exportPDF;
+  window.paraphraseField = paraphraseField;
+  window.logout = logout;
+  window.switchTab = switchTab;
+  window.loadReport = loadReport;
+  window.deleteReport = deleteReport;
+  window.loadSavedReports = loadSavedReports;
+  window.loadAdminReports = loadAdminReports;
+  window.viewAdminReport = viewAdminReport;
+  window.setStatus = setStatus;
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  LOADER
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    function showLoader(show) {
-        const el = $('loader');
-        if (show) el.classList.remove('hidden');
-        else el.classList.add('hidden');
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  TAB SWITCHING
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    function switchTab(tab) {
-        document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
-        document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.classList.add('active');
-        tabReport.classList.add('hidden');
-        tabSaved.classList.add('hidden');
-        tabAdmin.classList.add('hidden');
-        if (tab === 'report') tabReport.classList.remove('hidden');
-        else if (tab === 'saved') { tabSaved.classList.remove('hidden');
-            loadSavedReports(); } else if (tab === 'admin') { tabAdmin.classList.remove('hidden');
-            loadAdminReports(); }
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  DATE HELPERS
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    function formatDate(dateStr) {
-        if (!dateStr) return '—';
-        const d = new Date(dateStr + 'T00:00:00');
-        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    }
-
-    function setDefaultWeek() {
-        const now = new Date();
-        const day = now.getDay();
-        const diffToMon = (day === 0 ? 6 : day - 1);
-        const monday = new Date(now);
-        monday.setDate(now.getDate() - diffToMon);
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        const fmt = (d) => d.toISOString().slice(0, 10);
-        if (!weekStart.value) weekStart.value = fmt(monday);
-        if (!weekEnd.value) weekEnd.value = fmt(sunday);
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  RENDER TABLE
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    function renderTable() {
-        if (entries.length === 0) {
-            tableBody.innerHTML = '';
-            emptyState.style.display = 'block';
-            entryCountDisplay.textContent = '0';
-            nextSerialDisplay.textContent = '1';
-            return;
-        }
-        emptyState.style.display = 'none';
-        entryCountDisplay.textContent = entries.length;
-        nextSerialDisplay.textContent = entries.length + 1;
-
-        let html = '';
-        entries.forEach((e, idx) => {
-            const badge = e.completed === 'Yes' ? 'bg-emerald-100 text-emerald-700' :
-                e.completed === 'No' ? 'bg-rose-100 text-rose-700' :
-                'bg-amber-100 text-amber-700';
-            html += `
-                <tr class="fade-in">
-                    <td class="text-center font-medium text-slate-500">${e.serial}</td>
-                    <td class="whitespace-pre-wrap">${escapeHtml(e.important)}</td>
-                    <td class="whitespace-pre-wrap">${escapeHtml(e.process)}</td>
-                    <td class="text-center">
-                        <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${badge}">${e.completed}</span>
-                    </td>
-                    <td class="text-sm">${escapeHtml(e.models || '—')}</td>
-                    <td class="text-center">
-                        <button onclick="removeEntry(${idx})" class="text-slate-300 hover:text-rose-500 transition text-sm">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
-        tableBody.innerHTML = html;
-        updateSaveStatus();
-    }
-
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  ENTRIES CRUD
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    function addEntry() {
-        const important = inputImportant.value.trim();
-        const process = inputProcess.value.trim();
-        if (!important || !process) {
-            setStatus('Please fill "Important Work" and "Completion, Process & Results".', true);
-            inputImportant.focus();
-            return;
-        }
-        entries.push({
-            serial: nextSerial++,
-            important,
-            process,
-            completed: inputCompleted.value,
-            models: inputModels.value.trim()
-        });
-        inputImportant.value = '';
-        inputProcess.value = '';
-        inputModels.value = '';
-        inputImportant.focus();
-        renderTable();
-        setStatus(`Entry #${nextSerial - 1} added.`);
-    }
-
-    function removeEntry(idx) {
-        if (!confirm('Remove this entry?')) return;
-        entries.splice(idx, 1);
-        entries.forEach((e, i) => e.serial = i + 1);
-        nextSerial = entries.length + 1;
-        renderTable();
-        setStatus('Entry removed.');
-    }
-
-    function clearEntries() {
-        if (entries.length === 0) return;
-        if (!confirm('Remove all entries?')) return;
-        entries = [];
-        nextSerial = 1;
-        renderTable();
-        setStatus('All entries cleared.');
-    }
-
-    function resetFormState() {
-        entries = [];
-        nextSerial = 1;
-        currentReportId = null;
-        renderTable();
-        userName.value = '';
-        weekStart.value = '';
-        weekEnd.value = '';
-        setDefaultWeek();
-        saveStatus.textContent = 'Unsaved';
-    }
-
-    function updateSaveStatus() {
-        saveStatus.textContent = currentReportId ? 'Saved (remote)' : 'Unsaved';
-    }
-
-    function setStatus(msg, isError = false) {
-        statusMsg.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle text-amber-500' : 'fa-check-circle text-emerald-500'}"></i> ${msg}`;
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  AI PARAPHRASE (unchanged)
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    async function paraphraseField(textareaId) {
-        const el = $(textareaId);
-        const text = el.value.trim();
-        if (!text) { setStatus('Please enter some text to rewrite.', true);
-            el.focus(); return; }
-        el.disabled = true;
-        setStatus('⏳ Rewriting with AI …');
-        try {
-            const result = await callParaphraseAPI(text);
-            if (result) { el.value = result;
-                setStatus('✅ Rewritten successfully.'); } else { setStatus(text);
-            if (result) { el.value = result;
-                setStatus('✅ Rewritten successfully.'); } else { setStatus('⚠('⚠️ Could not rewrite.', true); }
-        } catch (err) { setStatus('⚠️ Error: ' + err.message, true); } finally { el.disabled = false;
-            el.focus️ Could not rewrite.', true); }
-        } catch (err) { setStatus('⚠️ Error: ' + err.message, true); } finally { el.disabled = false(); }
-    }
-
-    async function callParaphraseAPI(text) {
-        const MODEL = 'google/flan-t5-base;
-            el.focus(); }
-    }
-
-    async function callParaphraseAPI(text)';
-        const API_URL = `https://api-inference.huggingface.co/models/${MODEL}`;
-        const prompt =
-            ` {
-        const MODEL = 'google/flan-t5-base';
-        const API_URL = `https://api-inference.huggingface.co/models/${MODEL}`;
-        const prompt =
-            `Rewrite this technical work report text in a more professional, clearRewrite this technical work report text in a more professional, clear, and detailed way. Keep the meaning exactly the same but improve the language. Make it concise yet thorough. Here is, and detailed way. Keep the meaning exactly the same but improve the language. Make it concise yet thorough. Here is the text:\n the text:\n\n"${text}"\n\nRewritten version:`;
-        try {
-            const response =\n"${text}"\n\nRewritten version:`;
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body({ inputs: prompt, parameters: { max_length: 300, temperature: 0.7, do_sample: true } })
-            });
-            if (!response: JSON.stringify({ inputs: prompt, parameters: { max_length: 300, temperature: 0.7, do_sample: true } })
-            });
-            if (!response.ok) return fallbackParaphrase(text);
-            const data = await response.json();
-            if (.ok) return fallbackParaphrase(text);
-            const data = await response.json();
-            if (data && data.generated_text) {
-                let result = data.generated_text;
-                const idx = resultdata && data.generated_text) {
-                let result = data.g.indexOf('Rewritten version:');
-                if (idx !== -1)enerated_text;
-                const idx = result.indexOf('Rewritten version:');
-                if (idx !== -1) result = result.slice(idx + 18).trim();
-                result = result.slice(idx + 18).trim();
-                result = result.replace(/^["']|["']$/g, '').trim();
-                if result = result.replace(/^["']|["']$/g, '').trim();
-                if (result.length > 10) return result;
-            }
-            return fallbackParaphrase(text);
-        } catch (_) { return fallbackParaphrase(text); }
-    }
-
-    function fallback (result.length > 10) return result;
-            }
-            return fallbackParaphrase(text);
-        } catch (_) { return fallbackParaphrase(text); }
-    }
-
-    function fallbackParaphraseParaphrase(text) {
-        const replacements =(text) {
-        const replacements = {
-            'fix': 'rectify', 'fixing': 'rectifying',
-            'check': 'inspect', 'checking': 'inspecting',
-            'put': 'install', 'putting': 'installing',
-            'get': 'obtain', 'getting': 'obtaining',
-            'make': 'perform', 'making': {
-            'fix': 'rectify', 'fixing': 'rectifying',
-            'check': 'inspect', 'checking': 'inspecting',
-            'put': 'install', 'putting': 'installing',
-            'get': 'obtain', 'getting': 'obtaining',
-            'make': 'perform', 'making': 'performing',
-            'do': 'execute', 'doing': 'executing',
-            'change': 'replace', 'changing': 'replacing',
-            'setup': 'configure', 'set up 'performing',
-            'do': 'execute', 'doing': 'executing',
-            'change': 'replace', 'changing': 'replacing',
-            'setup': 'configure', 'set up': 'configure': 'configure',
-            'setting up': 'configuring',
-            'take': 'remove', 'taking': 'removing',
-            'look': 'examine',',
-            'setting up': 'configuring',
-            'take': 'remove', 'taking': 'removing',
-            'look': 'examine', 'looking': ' 'looking': 'examining',
-            'good': 'satisfactory', 'ok': 'operational',
-examining',
-            'good': 'satisfactory', 'ok': 'operational',
-                       'okay': 'operational', 'fine': 'functional',
-            'working': 'oper 'okay': 'operational', 'fine': 'functional',
-            'working': 'operational', 'work': 'operation',
-        };
-        let result = text;
-        for (constational', 'work': 'operation',
-        };
-        let result = text;
-        for (const [key, val] of Object.entries(replacements)) {
-            const regex = new RegExp('\\b' + key + [key, val] of Object.entries(replacements)) {
-            const regex = new RegExp('\\b' + key + '\\b', 'gi');
-            result = result.replace(regex, val);
-        }
-        '\\b', 'gi');
-            result = result.replace(regex, val);
-        }
-        result = result.charAt(0).toUpperCase() + result.slice(1);
-        if (!result.endsWith('.') && !result.endsWith('!') && !result.endsWith('?')) result += '.';
-        return result;
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━ result = result.charAt(0).toUpperCase() + result.slice(1);
-        if (!result.endsWith('.') && !result.endsWith('!') && !result.endsWith('?')) result += '.';
-        return result;
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  SAVE REPORT TO SUPABASE
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ //  SAVE REPORT TO SUPABASE
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    async function saveReport() {
-        if (!currentUser) { setStatus('Not logged in.',━━━━━━━━━━━━━━━━━━━
-    async function saveReport() {
-        if (!currentUser) { setStatus('Not logged in.', true); return; }
-        const name = userName true); return; }
-        const name = userName.value.trim();
-        const start = weekStart.value;
-        const end = weekEnd.value;
-        if (!.value.trim();
-        const start = weekStart.value;
-        const end = weekEnd.value;
-        if (!name) { setStatus('Please enter your name.', true);
-            userName.focus(); return; }
-        if (!start || !end) { setStatus('Please select a week range.', true);
-            weekStart.focus(); return; }
-        if (entries.length === 0)name) { setStatus('Please enter your name.', true);
-            userName.focus(); return; }
-        if (!start || !end) { setStatus('Please select a week range.', true);
-            weekStart.focus(); return; }
-        if (entries.length { setStatus('Add at least one entry.', true); return; }
-
-        showLoader(true);
-        try {
-            const payload = {
-                user_id: currentUser.id,
-                user_name: name,
-                week === 0) { setStatus('Add at least one entry.', true); return; }
-
-        showLoader(true);
-        try {
-            const payload = {
-                user_id: currentUser.id,
-                user_name: name,
-                week_start: start,
-                week_end: end,
-                entries: entries,
-            };
-            let result;
-            if (currentReportId) {
-                result = await supabase
-                    .from('reports')
-                    .update(payload)
-                    .eq_start: start,
-                week_end: end,
-                entries: entries,
-            };
-            let result;
-            if (currentReportId) {
-                result = await supabase
-                    .from('reports')
-                    .update(payload)
-                    .eq('id', currentReportId)
-                    .eq('user_id', currentUser.id);
-            } else {
-                result = await supabase
-                    .from('reports')
-                    .insert('id', currentReportId)
-                    .eq('user_id', currentUser.id);
-            } else {
-                result = await supabase
-                    .from('reports')
-                    .insert([payload])
-                    .select('id')
-                    .single();
-            }
-            if (result.error) throw result.error;
-            if (!currentReportId && result.data) currentReport([payload])
-                    .select('id')
-                    .single();
-            }
-            if (result.error) throw result.error;
-            if (!currentReportId && result.data) currentId = result.data.id;
-            saveStatus.textContent = 'Saved (remote)';
-            setStatus('Report saved successfully.');
-            await loadSavedReports();
-        } catch (err) {
-            setStatus('Save error: ' + err.message, true);
-        } finally {
-            showLoader(false);
-        }
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  LOAD SAVReportId = result.data.id;
-            saveStatus.textContent = 'Saved (remote)';
-            setStatus('Report saved successfully.');
-            await loadSavedReports();
-        } catch (err) {
-            setStatus('Save error: ' + err.message, true);
-        } finally {
-            showLoader(false);
-        }
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  LOAD SAVED REPORTS (for current user)
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    async function loadSavedReports() {
-        if (!currentUser) return;
-        showLoader(true);
-        try {
-            const { data, error } = await supabase
-                .ED REPORTS (for current user)
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    async function loadSavedReports() {
-        if (!currentUser) return;
-        showLoader(true);
-        try {
-            const { data, error } = await supabase
-                .fromfrom('reports')
-                .select('id, user_name, week('reports')
-                .select('id, user_name, week_start, week_end, created_at')
-                .eq('user_id', currentUser.id)
-                .order('created_at', { ascending: false });
-            if (error) throw error;
-           _start, week_end, created_at')
-                .eq('user_id', currentUser.id)
-                .order('created_at', { ascending: false });
-            if (error) throw error;
-            if (!data || data.length === 0) {
-                savedList.innerHTML =
-                    `<p class="text-slate-400 text-sm"><i class=" if (!data || data.length === 0) {
-                savedList.innerHTML =
-                    `<p class="text-slate-400 text-smfas fa-info-circle mr-1"></i>No saved reports yet.</p>`;
-            } else {
-                let"><i class="fas fa-info-circle mr-1"></i>No saved reports yet.</p>`;
-            } else {
-                let html = `<div class="space-y-2"> html = `<div class="space-y-2">`;
-                data.forEach(r => {
-                    html += `
-                        <div class="flex items-center justify-between p-3 bg-white/70 backdrop`;
-                data.forEach(r => {
-                    html += `
-                        <div class="flex items-center justify-between p-3 bg-white/70 backdrop-blur-sm rounded-xl border border-slate-200/80 hover:border-indigo-300 transition shadow-sm">
-                            <div-blur-sm rounded-xl border border-slate-200/80 hover:border-indigo-300 transition shadow-sm">
-                            <div>
-                                <span>
-                                <span class="font-semibold text-slate-700">${escapeHtml(r.user_name)}</span>
-                                <span class="text-sm text-slate-500 ml-2">${formatDate(r.week_start)} – class="font-semibold text-slate-700">${escapeHtml(r.user_name)}</span>
-                                <span class="text-sm text-slate-500 ml-2">${formatDate(r. ${formatDate(r.week_end)}</span>
-                                <span class="text-xs text-slate-400 ml-2">${new Date(r.created_at).toLocaleDateString()}</span>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="loadReport('${r.id}')" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium"><i class="fas fa-folder-open"></i> Loadweek_start)} – ${formatDate(r.week_end)}</span>
-                                <span class="text-xs text-slate-400 ml-2">${new Date(r.created_at).toLocaleDateString()}</span>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="loadReport('${r.id}')" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium"><i class="fas fa-folder-open"></i> Load</button>
-                               </button>
-                                <button onclick="deleteReport('${r.id}')" class="text-rose-500 hover:text-rose <button onclick="deleteReport('${r.id}')" class="text-rose-500 hover:text-rose-700 text-sm font-medium"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </div>
-                    `;
-                });
-                html += `</div>`;
-                savedList.innerHTML = html;
-            }
-       -700 text-sm font-medium"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </div>
-                    `;
-                });
-                html += `</div>`;
-                savedList.innerHTML = html;
-            } catch (err) {
-            savedList.innerHTML = `<p class="text-rose-500 text-sm">Error loading reports.</p>`;
-            console.error(err);
-        } finally {
-            showLoader(false);
-        }
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━ }
-        } catch (err) {
-            savedList.innerHTML = `<p class="text-rose-500 text-sm">Error loading reports.</p>`;
-            console.error(err);
-        } finally {
-            showLoader(false);
-        }
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  LOAD A SPECIFIC REPORT
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  LOAD A SPECIFIC REPORT
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    async function loadReport(reportId) {
-        show━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    async function loadReport(reportId) {
-        showLoader(true);
-        try {
-            const { data, error } = await supabase
-                .from('reports')
-                .select('*')
-                .eq('id', reportId)
-                .eq('user_id', currentUser.id)
-                .single();
-            if (error) throw error;
-            if (!data) { setStatus('Loader(true);
-        try {
-            const { data, error } = await supabase
-                .from('reports')
-                .select('*')
-                .eq('id', reportId)
-                .eq('user_id', currentUser.id)
-                .single();
-            if (error) throw error;
-            if (!data) { setStatus('Report not found.', true); return; }
-            userName.value = data.user_name || '';
-            weekStart.value = data.week_start || '';
-            weekEnd.value = data.week_end || '';
-            entries = data.entries || [];
-            entries.forEach((e, i) => e.serial = i + 1);
-            nextSerial = entries.length + 1;
-            currentReportId = data.id;
-            renderTable();
-            saveStatus.textContent = 'Loaded from cloud';
-            setStatus(`Loaded report from ${formatDate(data.week_start)} – ${formatDate(data.week_end)}`);
-            switchTab('report');
-        } catch (err) {
-            setStatus('Load error: ' + err.message, true);
-        } finally {
-            showLoader(false);
-        }
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  DELETE REPORT
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    async function deleteReport(reportId) {
-        if (!confirm('Delete this report permanently?')) return;
-        showLoader(true);
-        try {
-            const { error } = await supabase
-                .from('reports')
-                .delete()
-                .eq('id', reportId)
-                .eq('user_id', currentUser.id);
-            if (error) throw error;
-            setStatus('Report deleted.');
-            await loadSavedReports();
-            if (currentReportId === reportId) {
-                resetFormState();
-                switchTab('report');
-            }
-        } catch (err) {
-            setStatus('Delete error: ' + err.message, true);
-        } finallyReport not found.', true); return; }
-            userName.value = data.user_name || '';
-            weekStart.value = data.week_start || '';
-            weekEnd.value = data.week_end || '';
-            entries = data.entries || [];
-            entries.forEach((e, i) => e.serial = i + 1);
-            nextSerial = entries.length + 1;
-            currentReportId = data.id;
-            renderTable();
-            saveStatus.textContent = 'Loaded from cloud';
-            setStatus(`Loaded report from ${formatDate(data.week_start)} – ${formatDate(data.week_end)}`);
-            switchTab('report');
-        } catch (err) {
-            setStatus('Load error: ' + err.message, true);
-        } finally {
-            showLoader(false);
-        }
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  DELETE REPORT
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    async function deleteReport(reportId) {
-        if (!confirm('Delete this report permanently?')) return;
-        showLoader(true);
-        try {
-            const { error } = await supabase
-                .from('reports')
-                .delete()
-                .eq('id', reportId)
-                .eq('user_id', currentUser.id);
-            if (error) throw error;
-            setStatus('Report deleted.');
-            await loadSavedReports();
-            if (currentReportId === reportId) {
-                resetFormState();
-                switchTab('report');
-            }
-        } catch (err) {
-            setStatus('Delete error: ' + err.message, true);
-        } finally {
-            showLoader(false);
-        }
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  ADMIN DASHBOARD
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    async function loadAdminReports() {
-        if (!currentUser || currentUser.role !== 'admin') {
-            adminReportsList.innerHTML = `<p class="text-rose-500">Access denied.</p>`;
-            {
-            showLoader(false);
-        }
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  ADMIN DASHBOARD
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    async function loadAdminReports() {
-        if (!currentUser || currentUser.role !== 'admin') {
-            adminReportsList.innerHTML = `<p class="text-rose-500">Access denied.</ return;
-        }
-        showLoader(true);
-        try {
-            const { data, error } = await supabase
-                .from('reports')
-                .select('id, user_id, user_name, week_start, week_end, entries, created_at')
-                .order('created_at', { ascending: false });
-            if (error) throw error;
-            if (!data || data.length === 0) {
-                adminReportsList.innerHTML = `<p class="text-slate-400">No reports found.</p>`;
-            } else {
-                let html = `<table class="w-full text-sm border-collapse">
-                    <thead><tr class="bg-indigo-100 text-left">
-                        <th class="p-2 border border-slate-200 font-semibold text-slate-700">User</th>
-                        <th class="p-2 border border-slate-200 font-semibold text-slate-700">Week</th>
-                        <th class="p-2 border border-slate-200 font-semibold text-slate-700 text-center">Entries</th>
-                        <th class="p-2 border border-slate-200 font-semibold text-slate-700">Date</th>
-                        <th class="p-2 border border-slate-200 fontp>`;
-            return;
-        }
-        showLoader(true);
-        try {
-            const { data, error } = await supabase
-                .from('reports')
-                .select('id, user_id, user_name, week_start, week_end, entries, created_at')
-                .order('created_at', { ascending: false });
-            if (error) throw error;
-            if (!data || data.length === 0) {
-                adminReportsList.innerHTML = `<p class="text-slate-400">No reports found.</p>`;
-            } else {
-                let html = `<table class="w-full text-sm border-collapse">
-                    <thead><tr class="bg-indigo-100 text-left">
-                        <th class="p-2 border border-slate-200 font-semibold text-slate-700">User</th>
-                        <th class="p-2 border border-slate-200 font-semibold text-slate-700">Week</th>
-                        <th class="p-2 border border-slate-200 font-semibold text-slate-700 text-center">Entries</th>
-                        <th class="p-2 border border-slate-200 font-semibold text-slate-700">Date</th>
-                        <th class="p-2 border border-slate-200 font-semibold text-slate-700">Action</th>
-                    </tr></thead><tbody-semibold text-slate-700">Action</th>
-                    </tr></thead><tbody>`;
-                data.forEach(r => {
-                    const entryCount = (r.entries || []).>`;
-                data.forEach(r => {
-                    const entryCount = (r.entries || []).length;
-length;
-                    html += `<tr class="border-b hover:bg-indigo-50/50 transition">
-                        <td class="p-2 border border-slate-200">${escapeHtml(r.user_name)}</td>
-                        <td class="p-2 border border-slate-200">${formatDate(r.week_start)} – ${formatDate(r.week_end)}</td>
-                        <td class="p-2 border border                    html += `<tr class="border-b hover:bg-indigo-50/50 transition">
-                        <td class="p-2 border border-slate-200">${escapeHtml(r.user_name)}</td>
-                        <td class="p-2 border border-slate-200">${formatDate(r.week_start)} – ${formatDate(r.week_end)}</td>
-                        <td class="p-2 border border-slate-200-slate-200 text-center font-medium">${entryCount}</td>
-                        <td class="p-2 border border-slate-200">${new Date(r.created_at).toLocaleDateString()}</td>
-                        <td class="p-2 border border-slate-200">
-                            <button onclick="viewAdminReport('${r.id}')" class="text-indigo-600 hover:underline text-xs font-medium">View</button>
-                        </td>
-                    </tr>`;
-                });
-                html += `</tbody></table>`;
-                adminReportsList.innerHTML = html;
-            }
-        } catch (err) {
-            adminReportsList.innerHTML = `<p class="text-rose-500">Error: ${err.message}</p>`;
-        } finally {
-            showLoader(false);
-        }
-    }
-
-    async function viewAdminReport(reportId) {
-        showLoader(true);
-        try {
-            const { data, error } = await supabase
-                .from('reports')
-                .select('*')
-                .eq('id', reportId)
-                .single();
-            if (error) throw error;
-            if (!data) { alert('Report not found.'); return; }
-            const entriesText = (data.entries || []).map((e, i) =>
-                `${i+1}. ${e.important} (${e.completed})`).join('\n');
-            alert(`Report by ${data.user_name}\nWeek: ${formatDate(data.week_start)} – ${formatDate(data.week_end)}\nEntries:\n${entriesText || 'None'}`);
-        } catch (err) {
-            alert('Error loading report.');
-        } finally {
-            showLoader(false);
-        }
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  EXPORT PDF
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    function exportPDF() {
-        if (entries.length === 0) {
-            setStatus('No entries to export.', true);
-            return;
-        }
-        const name = text-center font-medium">${entryCount}</td>
-                        <td class="p-2 border border-slate-200">${new Date(r.created_at).toLocaleDateString()}</td>
-                        <td class="p-2 border border-slate-200">
-                            <button onclick="viewAdminReport('${r.id}')" class="text-indigo-600 hover:underline text-xs font-medium">View</button>
-                        </td>
-                    </tr>`;
-                });
-                html += `</tbody></table>`;
-                adminReportsList.innerHTML = html;
-            }
-        } catch (err) {
-            adminReportsList.innerHTML = `<p class="text-rose-500">Error: ${err.message}</p>`;
-        } finally {
-            showLoader(false);
-        }
-    }
-
-    async function viewAdminReport(reportId) {
-        showLoader(true);
-        try {
-            const { data, error } = await supabase
-                .from('reports')
-                .select('*')
-                .eq('id', reportId)
-                .single();
-            if (error) throw error;
-            if (!data) { alert('Report not found.'); return; }
-            const entriesText = (data.entries || []).map((e, i) =>
-                `${i+1}. ${e.important} (${e.completed})`).join('\n');
-            alert(`Report by ${data.user_name}\nWeek: ${formatDate(data.week_start)} – ${formatDate(data.week_end)}\nEntries:\n${entriesText || 'None'}`);
-        } catch (err) {
-            alert('Error loading report.');
-        } finally {
-            showLoader(false);
-        }
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  EXPORT PDF
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    function exportPDF() {
-        if (entries.length === 0) {
-            setStatus('No entries to export.', true);
-            return;
-        }
-        const name = userName.value.trim() || '—';
-        const start = weekStart.value;
-        const end = weekEnd.value;
-        const weekRange = start && end ? `${formatDate(start)} – ${formatDate(end)}` : '—';
-
-        pdfName.textContent = name;
-        pdfWeekRange.textContent = userName.value.trim() || '—';
-        const start = weekStart.value;
-        const end = weekEnd.value;
-        const weekRange = start && end ? `${formatDate(start)} – ${formatDate(end)}` : '—';
-
-        pdfName.textContent = name;
-        pdfWeek weekRange;
-        pdfGenDate.textContent = new Date().toLocaleStringRange.textContent = weekRange;
-        pdfGenDate.textContent = new Date().toLocaleString('en-US', { date('en-US', { dateStyle:Style: 'medium', time 'medium', timeStyle: 'short' });
-
-        let html = '';
-       Style: 'short' });
-
-        let entries.forEach(e => html = '';
-        entries.forEach(e => {
-            html += {
-            html += `
-                <tr>
-                    <td style="text-align `
-                <tr>
-                    <td style="text-align::center; paddingcenter; padding:6px :6px 4px; border4px; border:1px solid:1px solid #cbd5 #cbd5e1e1;">${e.serial}</td>
-                   ;">${e.serial}</td>
-                    <td style="padding <td style="padding:6px :6px 4px; border4px; border:1px solid:1px solid #cbd5e1;">${escapeHtml(e.important)}</td #cbd5e1;">${escapeHtml(e.important)}</td>
-                    <td>
-                    <td style="padding:6px 4 style="padding:6px 4px; border:px; border:1px solid #1px solid #cbd5e1;">${escapeHtml(e.process)}</td>
-                   cbd5e1;">${escapeHtml(e.process)}</td>
-                    <td style="text-align:center; padding:6px 4px <td style="text-align:center; padding:6px 4px; border:1; border:1px solid #cbd5e1;">${e.completed}</td>
-                    <td style="padding:6px 4px; border:px solid #cbd5e1;">${e.completed}</td>
-                    <td style="padding:6px 4px; border:1px solid #cbd5e1;">${escapeHtml(e.models || '—')}</td>
-                </tr>
-            `;
-        });
-        pdfTableBody.innerHTML =1px solid #cbd5e1;">${escapeHtml(e.models || '—')}</td>
-                </tr>
-            `;
-        });
-        pdfTableBody.innerHTML = html;
-
-        const container = $('pdfContainer');
-        container.style.display = html;
-
-        const container = $('pdfContainer');
-        container.style.display = 'block';
-        setStatus('⏳ Generating PDF …');
-        const element = $(' 'block';
-        setStatus('⏳ Generating PDF …');
-        const element = $('pdfContent');
-        const opt =pdfContent');
-        const opt = {
-            margin: [0.5, 0.5 {
-            margin: [0.5, 0.5, 0.5, 0.5],
-            filename: `Weekly_Report_${name.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html, 0.5, 0.5],
-            filename: `Weekly_Report_${name.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0, windowHeight: element.scrollHeight },
-           2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0, windowHeight: element.scrollHeight },
-            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-        };
-        html2pdf().set(opt).from(element).save().then(() => {
-            container.style.display = 'none';
-            setStatus('✅ PDF downloaded.');
-        }).catch(err => {
-            container.style.display = 'none';
-            setStatus('❌ PDF error: ' + err.message, true);
-        });
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  KEYBOARD SHORTCUTS
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    document.addEventListener('key jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-        };
-        html2pdf().set(opt).from(element).save().then(() => {
-            container.style.display = 'none';
-            setStatus('✅ PDF downloaded.');
-        }).catch(err => {
-            container.style.display = 'none';
-            setStatus('❌ PDF error: ' + err.message, true);
-        });
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  KEYBOARD SHORTCUTS
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.key === 'Enter') {
-            e.preventDefault();
-            addEntry();
-        }
-        if (e.key === 'Tab') {
-            const active = document.activeElement;
-            ifdown', (e) => {
-        if (e.ctrlKey && e.key === 'Enter') {
-            e.preventDefault();
-            addEntry();
-        }
-        if (e.key === 'Tab') {
-            const active = document.activeElement;
-            if (active && (active.id === 'inputImportant' || active.id === 'inputProcess')) {
-                e.preventDefault();
-                paraphraseField(active.id);
-            }
-        }
-    });
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━ (active && (active.id === 'inputImportant' || active.id === 'inputProcess')) {
-                e.preventDefault();
-                paraphraseField(active.id);
-            }
-        }
-    });
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  INIT – check session
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    //  INIT – check session
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    (async━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    (async function init() {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) function init() {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-            await on {
-            await onAuthSuccess(session.user);
-        } else {
-            authPage.classList.remove('hidden');
-            mainApp.classList.add('hidden');
-        }
-    })();
-
-    // Expose functionsAuthSuccess(session.user);
-        } else {
-            authPage.classList.remove('hidden');
-            mainApp.classList.add('hidden');
-        }
-    })();
-
-    // Expose functions globally
-    window.addEntry = addEntry;
-    window.removeEntry = removeEntry;
-    window.clearEntries = clearEntries;
-    window globally
-    window.addEntry = addEntry;
-    window.removeEntry = removeEntry;
-    window.clearEntries = clearEntries;
-    window.saveReport = saveReport;
-    window.exportPDF = exportPDF;
-    window.paraphraseField = paraphraseField;
-    window.logout = logout;
-    window.switchTab = switchTab;
-    window.loadReport = loadReport;
-    window.deleteReport = deleteReport;
-    window.loadSavedReports = loadSavedReports;
-    window.loadAdminReports = loadAdminReports;
-    window.viewAdminReport = viewAdminReport;
-    window.setStatus = setStatus;
-    console.log('✅ Weekly Report Portal ready with new design.');
+  console.log('✅ Weekly Report Portal ready (Sunon Asogli style, PDF format updated)');
 </script>
 
 </body>
