@@ -25,7 +25,6 @@
     ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 8px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--orange); }
 
-    .auth-gradient { background: var(--bg-gradient); }
     .glass {
       background: rgba(255,255,255,0.92);
       backdrop-filter: blur(16px);
@@ -84,12 +83,6 @@
       color: var(--primary);
     }
     .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(212,175,55,0.5); }
-    .btn-danger {
-      background: linear-gradient(135deg, #dc2626, #ef4444);
-      transition: all 0.2s ease;
-      color: white;
-    }
-    .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(220,38,38,0.5); }
     .btn-outline {
       border: 2px solid #cbd5e1;
       transition: all 0.2s ease;
@@ -150,26 +143,6 @@
       box-shadow: 0 0 0 3px rgba(212,175,55,0.2) !important;
       outline: none;
     }
-
-    .auth-tab-btn {
-      cursor: pointer;
-      transition: all 0.2s ease;
-      user-select: none;
-    }
-    .auth-tab-btn.active {
-      background: var(--primary) !important;
-      color: var(--gold) !important;
-      box-shadow: 0 4px 12px rgba(10,37,64,0.3);
-    }
-    .auth-tab-btn.inactive {
-      background: #f1f5f9 !important;
-      color: #64748b !important;
-    }
-    .auth-tab-btn.inactive:hover { background: #e2e8f0 !important; }
-
-    .gold-text { color: var(--gold); }
-    .gold-border { border-color: var(--gold); }
-    .bg-gold { background: var(--gold); }
   </style>
 </head>
 <body>
@@ -180,250 +153,204 @@
   <span class="text-sm font-medium text-primary">Loading…</span>
 </div>
 
-<div id="app" class="min-h-screen font-sans antialiased">
+<!-- ===== APP ===== -->
+<div id="app" class="min-h-screen bg-gradient-to-br from-slate-50 to-white font-sans antialiased">
 
-  <!-- ─── AUTH PAGE ─── -->
-  <div id="authPage" class="min-h-screen flex items-center justify-center auth-gradient px-4 py-8">
-    <div class="w-full max-w-md glass rounded-3xl p-8 shadow-2xl">
-      <div class="text-center mb-8">
-        <div class="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold mx-auto shadow-lg" style="background: linear-gradient(135deg, var(--primary), #1a3a5c); color: var(--gold);">SA</div>
-        <h2 class="text-3xl font-extrabold text-slate-800 mt-4">Maintenance Portal</h2>
-        <p class="text-sm text-slate-500 mt-1">Sunon Asogli Power Ghana</p>
+  <!-- ─── HEADER ─── -->
+  <header class="glass-dark sticky top-0 z-40 border-b border-gold/20 shadow-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div id="logo" class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg cursor-pointer" style="background: linear-gradient(135deg, var(--primary), #1a3a5c); color: var(--gold);" onclick="toggleAdmin()">SA</div>
+        <div>
+          <h1 class="text-xl font-bold text-white tracking-tight">Weekly Report Portal</h1>
+          <p class="text-xs text-gold-200">Maintenance – Controls &amp; Instrumentations</p>
+        </div>
       </div>
-
-      <!-- Auth Tabs -->
-      <div class="flex bg-slate-100 rounded-2xl p-1.5 mb-6">
-        <button id="authLoginTab" class="auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition">Login</button>
-        <button id="authSignupTab" class="auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition">Sign Up</button>
+      <div class="flex items-center gap-3 text-sm">
+        <span class="text-gold-200 hidden sm:inline">
+          <i class="far fa-user mr-1"></i> <span id="headerUserName" class="font-medium text-white">—</span>
+        </span>
+        <button onclick="resetAll()" class="px-3 py-1.5 text-sm text-gold-200 hover:text-white hover:bg-rose-500/30 rounded-lg transition backdrop-blur-sm">
+          <i class="fas fa-undo-alt mr-1"></i> New Report
+        </button>
       </div>
+    </div>
+  </header>
 
-      <!-- Login Container -->
-      <div id="loginFormContainer" style="display:block;">
-        <form id="loginForm" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-slate-700">Email</label>
-            <input id="loginEmail" type="email" placeholder="you@example.com" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition" required />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700">Password</label>
-            <input id="loginPassword" type="password" placeholder="••••••••" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition" required />
-          </div>
-          <button type="submit" class="w-full py-3 btn-primary font-bold rounded-xl shadow-lg transition">Sign In</button>
-          <div id="authError" class="text-sm text-rose-500 text-center hidden"></div>
-        </form>
-      </div>
-
-      <!-- Signup Container (initially hidden) -->
-      <div id="signupFormContainer" style="display:none;">
-        <form id="signupForm" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-slate-700">Full Name</label>
-            <input id="signupName" type="text" placeholder="Alexander Opoku Dwumaah" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition" required />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700">Email</label>
-            <input id="signupEmail" type="email" placeholder="you@example.com" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition" required />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700">Password</label>
-            <input id="signupPassword" type="password" placeholder="•••••••• (min 6 chars)" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition" required minlength="6" />
-          </div>
-          <button type="submit" class="w-full py-3 btn-gold font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5">Create Account</button>
-          <div id="signupError" class="text-sm text-rose-500 text-center hidden"></div>
-        </form>
-      </div>
-
-      <p class="text-xs text-slate-400 text-center mt-6">Secured with Supabase Auth</p>
+  <!-- ─── NAV TABS ─── -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 flex flex-wrap gap-2 border-b border-slate-200/70 pb-3">
+    <div class="nav-tab active" data-tab="report" onclick="switchTab('report')">
+      <i class="fas fa-pen-to-square mr-1.5"></i> My Report
+    </div>
+    <div class="nav-tab" data-tab="saved" onclick="switchTab('saved')">
+      <i class="fas fa-folder-open mr-1.5"></i> Saved Reports
+    </div>
+    <div id="adminTab" class="nav-tab hidden" data-tab="admin" onclick="switchTab('admin')">
+      <i class="fas fa-users-cog mr-1.5"></i> Admin Dashboard
     </div>
   </div>
 
-  <!-- ─── MAIN APP ─── -->
-  <div id="mainApp" class="hidden bg-gradient-to-br from-slate-50 to-white min-h-screen">
+  <!-- ===== TAB: My Report ===== -->
+  <div id="tab-report" class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+    <div class="glass rounded-3xl p-5 sm:p-6 shadow-2xl border border-white/30">
 
-    <!-- Header -->
-    <header class="glass-dark sticky top-0 z-40 border-b border-gold/20 shadow-xl">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg" style="background: linear-gradient(135deg, var(--primary), #1a3a5c); color: var(--gold);">SA</div>
-          <div>
-            <h1 class="text-xl font-bold text-white tracking-tight">Weekly Report Portal</h1>
-            <p class="text-xs text-gold-200">Maintenance – Controls &amp; Instrumentations</p>
-          </div>
+      <!-- User & Week -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">
+            <i class="fas fa-user mr-1 text-gold"></i> Your Name
+          </label>
+          <input id="userName" type="text" placeholder="e.g. Alexander Opoku Dwumaah"
+          class="w-full px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
         </div>
-        <div class="flex items-center gap-3 text-sm">
-          <span class="text-gold-200 hidden sm:inline">
-            <i class="far fa-user mr-1"></i> <span id="headerUserName" class="font-medium text-white">—</span>
-          </span>
-          <button onclick="logout()" class="px-3 py-1.5 text-sm text-rose-300 hover:text-white hover:bg-rose-500/30 rounded-lg transition backdrop-blur-sm">
-            <i class="fas fa-sign-out-alt mr-1"></i> Logout
-          </button>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">
+            <i class="fas fa-calendar-week mr-1 text-gold"></i> Week Start
+          </label>
+          <input id="weekStart" type="date"
+          class="w-full px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">
+            <i class="fas fa-calendar-week mr-1 text-gold"></i> Week End
+          </label>
+          <input id="weekEnd" type="date"
+          class="w-full px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
         </div>
       </div>
-    </header>
 
-    <!-- Navigation Tabs -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 flex flex-wrap gap-2 border-b border-slate-200/70 pb-3">
-      <div class="nav-tab active" data-tab="report" onclick="switchTab('report')">
-        <i class="fas fa-pen-to-square mr-1.5"></i> My Report
-      </div>
-      <div class="nav-tab" data-tab="saved" onclick="switchTab('saved')">
-        <i class="fas fa-folder-open mr-1.5"></i> Saved Reports
-      </div>
-      <div id="adminTab" class="nav-tab hidden" data-tab="admin" onclick="switchTab('admin')">
-        <i class="fas fa-users-cog mr-1.5"></i> Admin Dashboard
-      </div>
-    </div>
-
-    <!-- ===== TAB: My Report ===== -->
-    <div id="tab-report" class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-      <div class="glass rounded-3xl p-5 sm:p-6 shadow-2xl border border-white/30">
-        <!-- Name + Dates -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-1">
-              <i class="fas fa-user mr-1 text-gold"></i> Name
-            </label>
-            <input id="userName" type="text" placeholder="e.g. Alexander Opoku Dwumaah"
-            class="w-full px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-1">
-              <i class="fas fa-calendar-week mr-1 text-gold"></i> Week Start
-            </label>
-            <input id="weekStart" type="date"
-            class="w-full px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-1">
-              <i class="fas fa-calendar-week mr-1 text-gold"></i> Week End
-            </label>
-            <input id="weekEnd" type="date"
-            class="w-full px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
-          </div>
+      <!-- Entry Form -->
+      <div class="bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-200/80 p-4 sm:p-5 mb-5 shadow-inner">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <i class="fas fa-plus-circle text-gold"></i> Add Entry
+          </h3>
+          <span class="text-xs font-medium text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm"># <span id="nextSerialDisplay">1</span></span>
         </div>
-
-        <!-- Entry Form -->
-        <div class="bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-200/80 p-4 sm:p-5 mb-5 shadow-inner">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-              <i class="fas fa-plus-circle text-gold"></i> Add Entry
-            </h3>
-            <span class="text-xs font-medium text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm"># <span id="nextSerialDisplay">1</span></span>
-          </div>
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Important Work <span class="text-rose-500">*</span></label>
-              <div class="relative">
-                <textarea id="inputImportant" rows="2" placeholder="Describe the important work performed…"
-                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm resize-y shadow-sm"></textarea>
-                <button onclick="paraphraseField('inputImportant')"
-                class="absolute bottom-2 right-2 text-xs bg-gold/20 hover:bg-gold/40 text-primary px-2.5 py-1 rounded-lg transition flex items-center gap-1 paraphrase-btn">
-                <i class="fas fa-wand-magic-sparkles"></i> Rewrite
-              </button>
-            </div>
-          </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Completion, Process &amp; Results <span class="text-rose-500">*</span></label>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Important Work <span class="text-rose-500">*</span></label>
             <div class="relative">
-              <textarea id="inputProcess" rows="2" placeholder="Describe completion, process and results…"
+              <textarea id="inputImportant" rows="2" placeholder="Describe the important work performed…"
               class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm resize-y shadow-sm"></textarea>
-              <button onclick="paraphraseField('inputProcess')"
-              class="absolute bottom-2 right-2 text-xs bg-gold/20 hover:bg-gold/40 text-primary px-2.5 py-1 rounded-lg transition flex items-center gap-1 paraphrase-btn">
+              <button onclick="paraphraseField('inputImportant')"
+              class="absolute bottom-2 right-2 text-xs bg-gold/20 hover:bg-gold/40 text-primary px-2.5 py-1 rounded-lg transition flex items-center gap-1">
               <i class="fas fa-wand-magic-sparkles"></i> Rewrite
             </button>
           </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Is it completed?</label>
-          <select id="inputCompleted" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm">
-            <option value="Yes">✅ Yes</option>
-            <option value="No">❌ No</option>
-            <option value="In Progress">⏳ In Progress</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Model Numbers (spare parts)</label>
-          <input id="inputModels" type="text" placeholder="e.g. DS-1602ZJ, 57A241500"
-          class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Completion, Process &amp; Results <span class="text-rose-500">*</span></label>
+          <div class="relative">
+            <textarea id="inputProcess" rows="2" placeholder="Describe completion, process and results…"
+            class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm resize-y shadow-sm"></textarea>
+            <button onclick="paraphraseField('inputProcess')"
+            class="absolute bottom-2 right-2 text-xs bg-gold/20 hover:bg-gold/40 text-primary px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+            <i class="fas fa-wand-magic-sparkles"></i> Rewrite
+          </button>
         </div>
       </div>
-
-      <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <button onclick="addEntry()" class="px-5 py-2.5 btn-primary text-white text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-2">
-          <i class="fas fa-plus"></i> Add Entry
-        </button>
-        <div class="text-xs text-slate-600 flex items-center gap-3 bg-white/60 px-3 py-1.5 rounded-full shadow-sm">
-          <span><i class="far fa-circle mr-1"></i> <span id="entryCountDisplay">0</span> entries</span>
-          <span class="hidden sm:inline">|</span>
-          <span class="hidden sm:inline"><i class="far fa-save mr-1"></i> <span id="saveStatus">Unsaved</span></span>
-        </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Is it completed?</label>
+        <select id="inputCompleted" class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm">
+          <option value="Yes">✅ Yes</option>
+          <option value="No">❌ No</option>
+          <option value="In Progress">⏳ In Progress</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Model Numbers (spare parts)</label>
+        <input id="inputModels" type="text" placeholder="e.g. DS-1602ZJ, 57A241500"
+        class="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-soft mt-6">
-      <table class="report-table w-full text-sm">
-        <thead>
-          <tr>
-            <th class="w-14 text-center">#</th>
-            <th class="min-w-[180px] text-left">Important Work</th>
-            <th class="min-w-[220px] text-left">Completion, Process &amp; Results</th>
-            <th class="w-32 text-center">Completed?</th>
-            <th class="min-w-[150px] text-left">Model Numbers</th>
-            <th class="w-12 text-center">✕</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-      <div id="emptyState" class="py-12 text-center text-slate-400 text-sm">
-        <i class="fas fa-inbox text-4xl block mb-3 text-slate-300"></i>
-        No entries yet. Add your first work item above.
-      </div>
-    </div>
-
-    <!-- Actions -->
-    <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex flex-wrap gap-3">
-        <button onclick="saveReport()" class="px-5 py-2.5 btn-gold text-primary text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-2">
-          <i class="fas fa-cloud-upload-alt"></i> Save Report
-        </button>
-        <button onclick="exportPDF()" class="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white text-sm font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5 flex items-center gap-2">
-          <i class="fas fa-file-pdf"></i> Export PDF
-        </button>
-        <button onclick="clearEntries()" class="px-4 py-2.5 btn-outline text-sm font-semibold rounded-xl transition flex items-center gap-2">
-          <i class="fas fa-trash-alt"></i> Clear All
-        </button>
-      </div>
-      <div id="statusMsg" class="text-sm text-slate-600 flex items-center gap-2 bg-white/60 px-3 py-1.5 rounded-full shadow-sm">
-        <i class="fas fa-info-circle text-gold"></i> Ready
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <button onclick="addEntry()" class="px-5 py-2.5 btn-primary text-white text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-2">
+        <i class="fas fa-plus"></i> Add Entry
+      </button>
+      <div class="text-xs text-slate-600 flex items-center gap-3 bg-white/60 px-3 py-1.5 rounded-full shadow-sm">
+        <span><i class="far fa-circle mr-1"></i> <span id="entryCountDisplay">0</span> entries</span>
+        <span class="hidden sm:inline">|</span>
+        <span class="hidden sm:inline"><i class="far fa-save mr-1"></i> <span id="saveStatus">Unsaved</span></span>
       </div>
     </div>
   </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-soft mt-6">
+    <table class="report-table w-full text-sm">
+      <thead>
+        <tr>
+          <th class="w-14 text-center">#</th>
+          <th class="min-w-[180px] text-left">Important Work</th>
+          <th class="min-w-[220px] text-left">Completion, Process &amp; Results</th>
+          <th class="w-32 text-center">Completed?</th>
+          <th class="min-w-[150px] text-left">Model Numbers</th>
+          <th class="w-12 text-center">✕</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div id="emptyState" class="py-12 text-center text-slate-400 text-sm">
+      <i class="fas fa-inbox text-4xl block mb-3 text-slate-300"></i>
+      No entries yet. Add your first work item above.
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex flex-wrap gap-3">
+      <button onclick="saveReport()" class="px-5 py-2.5 btn-gold text-primary text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-2">
+        <i class="fas fa-cloud-upload-alt"></i> Save Report
+      </button>
+      <button onclick="exportPDF()" class="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white text-sm font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5 flex items-center gap-2">
+        <i class="fas fa-file-pdf"></i> Export PDF
+      </button>
+      <button onclick="clearEntries()" class="px-4 py-2.5 btn-outline text-sm font-semibold rounded-xl transition flex items-center gap-2">
+        <i class="fas fa-trash-alt"></i> Clear All
+      </button>
+    </div>
+    <div id="statusMsg" class="text-sm text-slate-600 flex items-center gap-2 bg-white/60 px-3 py-1.5 rounded-full shadow-sm">
+      <i class="fas fa-info-circle text-gold"></i> Ready
+    </div>
+  </div>
+</div>
 </div>
 
 <!-- ===== TAB: Saved Reports ===== -->
 <div id="tab-saved" class="max-w-7xl mx-auto px-4 sm:px-6 py-6 hidden">
   <div class="glass rounded-3xl p-5 shadow-2xl border border-white/30">
     <h2 class="text-xl font-bold text-slate-800 mb-4"><i class="fas fa-folder-open mr-2 text-gold"></i>Your Saved Reports</h2>
+    <div class="mb-4 flex flex-wrap items-center gap-3">
+      <input id="loadUsername" type="text" placeholder="Enter your name to load reports" class="flex-1 min-w-[200px] px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
+      <button onclick="loadSavedReports()" class="px-5 py-2.5 btn-primary text-white text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-2">
+        <i class="fas fa-search"></i> Load
+      </button>
+    </div>
     <div id="savedList" class="space-y-2">
-      <p class="text-slate-400 text-sm">Loading your reports…</p>
+      <p class="text-slate-400 text-sm">Enter your name and click Load.</p>
     </div>
   </div>
 </div>
 
-<!-- ===== TAB: Admin Dashboard ===== -->
+<!-- ===== TAB: Admin Dashboard (hidden by default) ===== -->
 <div id="tab-admin" class="max-w-7xl mx-auto px-4 sm:px-6 py-6 hidden">
   <div class="glass rounded-3xl p-5 shadow-2xl border border-white/30">
     <h2 class="text-xl font-bold text-slate-800 mb-4"><i class="fas fa-users-cog mr-2 text-gold"></i>Admin Dashboard – All Reports</h2>
+    <div class="mb-4 flex flex-wrap items-center gap-3">
+      <input id="adminPassword" type="password" placeholder="Enter admin password" class="flex-1 min-w-[200px] px-4 py-2.5 bg-white/90 border border-slate-300 rounded-xl focus:ring-2 focus:ring-gold focus:border-gold outline-none transition text-sm shadow-sm" />
+      <button onclick="loadAdminReports()" class="px-5 py-2.5 btn-gold text-primary text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-2">
+        <i class="fas fa-unlock"></i> Unlock
+      </button>
+    </div>
     <div id="adminReportsList" class="overflow-x-auto">
-      <p class="text-slate-400 text-sm">Loading all reports…</p>
+      <p class="text-slate-400 text-sm">Enter the admin password to view all reports.</p>
     </div>
   </div>
 </div>
 
-</div> <!-- end mainApp -->
-
-<!-- ===== PDF CONTAINER ===== -->
+<!-- ===== PDF CONTAINER (hidden) ===== -->
 <div id="pdfContainer" style="display:none;">
   <div id="pdfContent" style="padding:40px 32px; background:white; font-family:'Segoe UI',Arial,sans-serif;">
     <div style="text-align:center; border-bottom:2px solid #0a2540; padding-bottom:12px; margin-bottom:16px;">
@@ -460,7 +387,7 @@
 <!-- ===== JAVASCRIPT ===== -->
 <script>
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  SUPABASE CONFIG
+  //  SUPABASE CONFIG (no auth)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const SUPABASE_URL = 'https://dnhdyyvleloypnbbknay.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuaGR5eXZsZWxveXBuYmJrbmF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDMxMjksImV4cCI6MjA5ODA3OTEyOX0.XeVjT_DBKIMg-1Jd8V7IMwTsiZZB86QIW3dB-R1QjQY';
@@ -471,7 +398,6 @@
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   let entries = [];
   let nextSerial = 1;
-  let currentUser = null;
   let currentReportId = null;
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -493,23 +419,6 @@
   const saveStatus = $('saveStatus');
   const headerUserName = $('headerUserName');
 
-  // Auth elements
-  const authPage = $('authPage');
-  const mainApp = $('mainApp');
-  const loginFormContainer = $('loginFormContainer');
-  const signupFormContainer = $('signupFormContainer');
-  const loginForm = $('loginForm');
-  const signupForm = $('signupForm');
-  const authLoginTab = $('authLoginTab');
-  const authSignupTab = $('authSignupTab');
-  const authError = $('authError');
-  const signupError = $('signupError');
-  const loginEmail = $('loginEmail');
-  const loginPassword = $('loginPassword');
-  const signupName = $('signupName');
-  const signupEmail = $('signupEmail');
-  const signupPassword = $('signupPassword');
-
   // Tabs
   const tabReport = $('tab-report');
   const tabSaved = $('tab-saved');
@@ -517,6 +426,8 @@
   const adminTab = $('adminTab');
   const savedList = $('savedList');
   const adminReportsList = $('adminReportsList');
+  const loadUsername = $('loadUsername');
+  const adminPassword = $('adminPassword');
 
   // PDF
   const pdfName = $('pdfName');
@@ -525,173 +436,25 @@
   const pdfGenDate = $('pdfGenDate');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  AUTH – TAB SWITCHING (guaranteed to work)
+  //  INIT – set default week, load local username
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  function switchAuthTab(tab) {
-    if (tab === 'login') {
-      loginFormContainer.style.display = 'block';
-      signupFormContainer.style.display = 'none';
-      authLoginTab.className = 'auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
-      authSignupTab.className = 'auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
-    } else {
-      signupFormContainer.style.display = 'block';
-      loginFormContainer.style.display = 'none';
-      authSignupTab.className = 'auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
-      authLoginTab.className = 'auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
-    }
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  INIT AUTH TOGGLES ON DOM READY
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  document.addEventListener('DOMContentLoaded', function() {
-    // Ensure the tabs exist and attach listeners
-    const loginTab = document.getElementById('authLoginTab');
-    const signupTab = document.getElementById('authSignupTab');
-    if (loginTab && signupTab) {
-      loginTab.addEventListener('click', function() { switchAuthTab('login'); });
-      signupTab.addEventListener('click', function() { switchAuthTab('signup'); });
-    }
-  });
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  AUTH – LOGIN
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    authError.classList.add('hidden');
-    const email = loginEmail.value.trim();
-    const password = loginPassword.value;
-    if (!email || !password) {
-      authError.textContent = 'Please fill in all fields.';
-      authError.classList.remove('hidden');
-      return;
-    }
-    showLoader(true);
-    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-    showLoader(false);
-    if (error) {
-      authError.textContent = error.message;
-      authError.classList.remove('hidden');
-      return;
-    }
-    await onAuthSuccess(data.user);
-  });
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  AUTH – SIGNUP
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  signupForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    signupError.classList.add('hidden');
-    const name = signupName.value.trim();
-    const email = signupEmail.value.trim();
-    const password = signupPassword.value;
-
-    if (!name || !email || password.length < 6) {
-      signupError.textContent = 'Please fill all fields (password ≥ 6 chars).';
-      signupError.classList.remove('hidden');
-      return;
-    }
-
-    showLoader(true);
-    const { data, error } = await supabaseClient.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: name } }
-    });
-    showLoader(false);
-
-    if (error) {
-      signupError.textContent = error.message;
-      signupError.classList.remove('hidden');
-      return;
-    }
-
-    if (data.user) {
-      if (data.user.identities && data.user.identities.length === 0) {
-        signupError.textContent = 'This email is already registered. Please login.';
-        signupError.classList.remove('hidden');
-        return;
-      }
-      await onAuthSuccess(data.user);
-    }
-  });
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  AUTH – SUCCESS HANDLER
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  async function onAuthSuccess(user) {
-    const { data: profile } = await supabaseClient
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    let role = 'user';
-    if (!profile) {
-      await supabaseClient
-        .from('profiles')
-        .insert({ id: user.id, username: user.user_metadata?.full_name || user.email, role: 'user' });
-    } else {
-      role = profile.role || 'user';
-    }
-
-    currentUser = { id: user.id, email: user.email, role };
-    headerUserName.textContent = user.user_metadata?.full_name || user.email;
-
-    if (role === 'admin') adminTab.classList.remove('hidden');
-    else adminTab.classList.add('hidden');
-
-    authPage.classList.add('hidden');
-    mainApp.classList.remove('hidden');
+  function init() {
     setDefaultWeek();
-    resetFormState();
-    await loadSavedReports();
-    switchTab('report');
-    setStatus('Welcome! Create or load a report.');
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  LOGOUT
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  async function logout() {
-    if (!confirm('Logout?')) return;
-    await supabaseClient.auth.signOut();
-    currentUser = null;
-    entries = [];
-    currentReportId = null;
-    mainApp.classList.add('hidden');
-    authPage.classList.remove('hidden');
-    loginForm.reset();
-    signupForm.reset();
-    authError.classList.add('hidden');
-    signupError.classList.add('hidden');
-    switchAuthTab('login');
-    setStatus('Logged out.');
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  LOADER
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  function showLoader(show) {
-    const el = $('loader');
-    if (show) el.classList.remove('hidden');
-    else el.classList.add('hidden');
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  TAB SWITCHING (main app)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  function switchTab(tab) {
-    document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
-    document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.classList.add('active');
-    tabReport.classList.add('hidden');
-    tabSaved.classList.add('hidden');
-    tabAdmin.classList.add('hidden');
-    if (tab === 'report') tabReport.classList.remove('hidden');
-    else if (tab === 'saved') { tabSaved.classList.remove('hidden'); loadSavedReports(); }
-    else if (tab === 'admin') { tabAdmin.classList.remove('hidden'); loadAdminReports(); }
+    // load username from localStorage
+    const savedName = localStorage.getItem('report_username');
+    if (savedName) {
+      userName.value = savedName;
+      headerUserName.textContent = savedName;
+      loadUsername.value = savedName;
+    }
+    // listen to username changes
+    userName.addEventListener('input', () => {
+      const name = userName.value.trim();
+      localStorage.setItem('report_username', name);
+      headerUserName.textContent = name || '—';
+    });
+    renderTable();
+    setStatus('Ready. Enter your name and add entries.');
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -726,6 +489,29 @@
     const fmt = d => d.toISOString().slice(0,10);
     if (!weekStart.value) weekStart.value = fmt(monday);
     if (!weekEnd.value) weekEnd.value = fmt(sunday);
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  LOADER
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function showLoader(show) {
+    const el = $('loader');
+    if (show) el.classList.remove('hidden');
+    else el.classList.add('hidden');
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  TAB SWITCHING
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  function switchTab(tab) {
+    document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.nav-tab[data-tab="${tab}"]`)?.classList.add('active');
+    tabReport.classList.add('hidden');
+    tabSaved.classList.add('hidden');
+    tabAdmin.classList.add('hidden');
+    if (tab === 'report') tabReport.classList.remove('hidden');
+    else if (tab === 'saved') { tabSaved.classList.remove('hidden'); }
+    else if (tab === 'admin') { tabAdmin.classList.remove('hidden'); }
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -820,7 +606,8 @@
     setStatus('All entries cleared.');
   }
 
-  function resetFormState() {
+  function resetAll() {
+    if (entries.length > 0 && !confirm('Clear current report?')) return;
     entries = [];
     nextSerial = 1;
     currentReportId = null;
@@ -830,6 +617,9 @@
     weekEnd.value = '';
     setDefaultWeek();
     saveStatus.textContent = 'Unsaved';
+    localStorage.removeItem('report_username');
+    headerUserName.textContent = '—';
+    setStatus('Reset complete.');
   }
 
   function updateSaveStatus() {
@@ -908,10 +698,9 @@
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  SAVE / LOAD / DELETE (Supabase)
+  //  SAVE REPORT TO SUPABASE (no auth)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function saveReport() {
-    if (!currentUser) { setStatus('Not logged in.', true); return; }
     const name = userName.value.trim();
     const start = weekStart.value;
     const end = weekEnd.value;
@@ -921,42 +710,62 @@
 
     showLoader(true);
     try {
-      const payload = { user_id: currentUser.id, user_name: name, week_start: start, week_end: end, entries };
+      const payload = {
+        username: name,
+        week_start: start,
+        week_end: end,
+        entries: entries,
+      };
       let result;
       if (currentReportId) {
-        result = await supabaseClient.from('reports').update(payload).eq('id', currentReportId).eq('user_id', currentUser.id);
+        result = await supabaseClient
+          .from('reports')
+          .update(payload)
+          .eq('id', currentReportId);
       } else {
-        result = await supabaseClient.from('reports').insert([payload]).select('id').single();
+        result = await supabaseClient
+          .from('reports')
+          .insert([payload])
+          .select('id')
+          .single();
       }
       if (result.error) throw result.error;
       if (!currentReportId && result.data) currentReportId = result.data.id;
       saveStatus.textContent = 'Saved (remote)';
       setStatus('Report saved successfully.');
-      await loadSavedReports();
     } catch (err) {
       setStatus('Save error: ' + err.message, true);
-    } finally { showLoader(false); }
+    } finally {
+      showLoader(false);
+    }
   }
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  LOAD SAVED REPORTS FOR A USERNAME
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function loadSavedReports() {
-    if (!currentUser) return;
+    const username = loadUsername.value.trim() || userName.value.trim();
+    if (!username) {
+      savedList.innerHTML = `<p class="text-rose-500 text-sm">Please enter a name.</p>`;
+      return;
+    }
     showLoader(true);
     try {
       const { data, error } = await supabaseClient
         .from('reports')
-        .select('id, user_name, week_start, week_end, created_at')
-        .eq('user_id', currentUser.id)
+        .select('id, username, week_start, week_end, created_at')
+        .eq('username', username)
         .order('created_at', { ascending: false });
       if (error) throw error;
       if (!data || data.length === 0) {
-        savedList.innerHTML = `<p class="text-slate-400 text-sm"><i class="fas fa-info-circle mr-1"></i>No saved reports yet.</p>`;
+        savedList.innerHTML = `<p class="text-slate-400 text-sm">No saved reports for "${escapeHtml(username)}".</p>`;
       } else {
         let html = `<div class="space-y-2">`;
         data.forEach(r => {
           html += `
             <div class="flex items-center justify-between p-3 bg-white/70 backdrop-blur-sm rounded-xl border border-slate-200/80 hover:border-gold transition shadow-sm">
               <div>
-                <span class="font-semibold text-slate-700">${escapeHtml(r.user_name)}</span>
+                <span class="font-semibold text-slate-700">${escapeHtml(r.username)}</span>
                 <span class="text-sm text-slate-500 ml-2">${formatDate(r.week_start)} – ${formatDate(r.week_end)}</span>
                 <span class="text-xs text-slate-400 ml-2">${new Date(r.created_at).toLocaleDateString()}</span>
               </div>
@@ -971,11 +780,16 @@
         savedList.innerHTML = html;
       }
     } catch (err) {
-      savedList.innerHTML = `<p class="text-rose-500 text-sm">Error loading reports.</p>`;
+      savedList.innerHTML = `<p class="text-rose-500 text-sm">Error: ${err.message}</p>`;
       console.error(err);
-    } finally { showLoader(false); }
+    } finally {
+      showLoader(false);
+    }
   }
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  LOAD A SPECIFIC REPORT
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function loadReport(reportId) {
     showLoader(true);
     try {
@@ -983,11 +797,10 @@
         .from('reports')
         .select('*')
         .eq('id', reportId)
-        .eq('user_id', currentUser.id)
         .single();
       if (error) throw error;
       if (!data) { setStatus('Report not found.', true); return; }
-      userName.value = data.user_name || '';
+      userName.value = data.username || '';
       weekStart.value = data.week_start || '';
       weekEnd.value = data.week_end || '';
       entries = data.entries || [];
@@ -998,38 +811,70 @@
       saveStatus.textContent = 'Loaded from cloud';
       setStatus(`Loaded report from ${formatDate(data.week_start)} – ${formatDate(data.week_end)}`);
       switchTab('report');
+      // update header
+      headerUserName.textContent = data.username || '—';
     } catch (err) {
       setStatus('Load error: ' + err.message, true);
-    } finally { showLoader(false); }
+    } finally {
+      showLoader(false);
+    }
   }
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  DELETE REPORT (simple, no auth check)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function deleteReport(reportId) {
     if (!confirm('Delete this report permanently?')) return;
     showLoader(true);
     try {
-      const { error } = await supabaseClient.from('reports').delete().eq('id', reportId).eq('user_id', currentUser.id);
+      const { error } = await supabaseClient
+        .from('reports')
+        .delete()
+        .eq('id', reportId);
       if (error) throw error;
       setStatus('Report deleted.');
       await loadSavedReports();
-      if (currentReportId === reportId) { resetFormState(); switchTab('report'); }
+      if (currentReportId === reportId) {
+        currentReportId = null;
+        entries = [];
+        nextSerial = 1;
+        renderTable();
+        saveStatus.textContent = 'Unsaved';
+      }
     } catch (err) {
       setStatus('Delete error: ' + err.message, true);
-    } finally { showLoader(false); }
+    } finally {
+      showLoader(false);
+    }
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  ADMIN DASHBOARD
+  //  ADMIN – toggle admin tab (click logo 5 times)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  let logoClickCount = 0;
+  function toggleAdmin() {
+    logoClickCount++;
+    if (logoClickCount >= 5) {
+      adminTab.classList.remove('hidden');
+      setStatus('Admin tab unlocked!');
+      logoClickCount = 0;
+    }
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  ADMIN – load all reports (password: admin)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function loadAdminReports() {
-    if (!currentUser || currentUser.role !== 'admin') {
-      adminReportsList.innerHTML = `<p class="text-rose-500">Access denied.</p>`;
+    const pw = adminPassword.value.trim();
+    if (pw !== 'admin') {
+      adminReportsList.innerHTML = `<p class="text-rose-500 text-sm">Incorrect password. Try again.</p>`;
       return;
     }
     showLoader(true);
     try {
       const { data, error } = await supabaseClient
         .from('reports')
-        .select('id, user_id, user_name, week_start, week_end, entries, created_at')
+        .select('id, username, week_start, week_end, entries, created_at')
         .order('created_at', { ascending: false });
       if (error) throw error;
       if (!data || data.length === 0) {
@@ -1046,7 +891,7 @@
         data.forEach(r => {
           const entryCount = (r.entries || []).length;
           html += `<tr class="border-b hover:bg-indigo-50/50 transition">
-            <td class="p-2 border border-slate-200">${escapeHtml(r.user_name)}</td>
+            <td class="p-2 border border-slate-200">${escapeHtml(r.username)}</td>
             <td class="p-2 border border-slate-200">${formatDate(r.week_start)} – ${formatDate(r.week_end)}</td>
             <td class="p-2 border border-slate-200 text-center font-medium">${entryCount}</td>
             <td class="p-2 border border-slate-200">${new Date(r.created_at).toLocaleDateString()}</td>
@@ -1060,24 +905,33 @@
       }
     } catch (err) {
       adminReportsList.innerHTML = `<p class="text-rose-500">Error: ${err.message}</p>`;
-    } finally { showLoader(false); }
+    } finally {
+      showLoader(false);
+    }
   }
 
   async function viewAdminReport(reportId) {
     showLoader(true);
     try {
-      const { data, error } = await supabaseClient.from('reports').select('*').eq('id', reportId).single();
+      const { data, error } = await supabaseClient
+        .from('reports')
+        .select('*')
+        .eq('id', reportId)
+        .single();
       if (error) throw error;
       if (!data) { alert('Report not found.'); return; }
-      const entriesText = (data.entries || []).map((e, i) => `${i+1}. ${e.important} (${e.completed})`).join('\n');
-      alert(`Report by ${data.user_name}\nWeek: ${formatDate(data.week_start)} – ${formatDate(data.week_end)}\nEntries:\n${entriesText || 'None'}`);
+      const entriesText = (data.entries || []).map((e, i) =>
+        `${i+1}. ${e.important} (${e.completed})`).join('\n');
+      alert(`Report by ${data.username}\nWeek: ${formatDate(data.week_start)} – ${formatDate(data.week_end)}\nEntries:\n${entriesText || 'None'}`);
     } catch (err) {
       alert('Error loading report.');
-    } finally { showLoader(false); }
+    } finally {
+      showLoader(false);
+    }
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  EXPORT PDF
+  //  EXPORT PDF – exact format from sample
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function exportPDF() {
     if (entries.length === 0) {
@@ -1145,35 +999,26 @@
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   //  INIT
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  (async function init() {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session?.user) {
-      await onAuthSuccess(session.user);
-    } else {
-      authPage.classList.remove('hidden');
-      mainApp.classList.add('hidden');
-      // Ensure login form is visible by default
-      switchAuthTab('login');
-    }
-  })();
+  init();
 
-  // Expose globals
+  // Expose functions to global scope
   window.addEntry = addEntry;
   window.removeEntry = removeEntry;
   window.clearEntries = clearEntries;
   window.saveReport = saveReport;
   window.exportPDF = exportPDF;
   window.paraphraseField = paraphraseField;
-  window.logout = logout;
   window.switchTab = switchTab;
+  window.loadSavedReports = loadSavedReports;
   window.loadReport = loadReport;
   window.deleteReport = deleteReport;
-  window.loadSavedReports = loadSavedReports;
   window.loadAdminReports = loadAdminReports;
   window.viewAdminReport = viewAdminReport;
+  window.toggleAdmin = toggleAdmin;
+  window.resetAll = resetAll;
   window.setStatus = setStatus;
 
-  console.log('✅ Weekly Report Portal ready – Sign Up toggle works.');
+  console.log('✅ Weekly Report Portal ready (no login).');
 </script>
 
 </body>
