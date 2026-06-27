@@ -5,49 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Weekly Report Portal – Sunon Asogli</title>
 
-  <!-- Tailwind + Font Awesome + html2pdf -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    /* ── Sunon Asogli inspired colours ── */
     :root {
-      --primary: #0a2540;      /* deep navy */
-      --gold: #d4af37;         /* gold */
+      --primary: #0a2540;
+      --gold: #d4af37;
       --gold-light: #f5c842;
       --orange: #e67e22;
       --bg-gradient: linear-gradient(135deg, #0a2540 0%, #1a3a5c 50%, #2a4a6c 100%);
     }
-
     * { box-sizing: border-box; }
     body { background: #f0f4ff; }
-
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 8px; }
     ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 8px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--orange); }
 
-    .auth-gradient {
-      background: var(--bg-gradient);
-    }
-
+    .auth-gradient { background: var(--bg-gradient); }
     .glass {
-      background: rgba(255, 255, 255, 0.92);
+      background: rgba(255,255,255,0.92);
       backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255,255,255,0.3);
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
     }
-
     .glass-dark {
-      background: rgba(10, 37, 64, 0.85);
+      background: rgba(10,37,64,0.85);
       backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(212, 175, 55, 0.2);
+      border: 1px solid rgba(212,175,55,0.2);
     }
-
     .report-table th {
       background: var(--primary) !important;
       color: var(--gold) !important;
@@ -63,7 +52,7 @@
       background: white;
     }
     .report-table tr:nth-child(even) td { background: #f8fafc; }
-    .report-table tr:hover td { background: #fefce8; transition: 0.15s; }
+    .report-table tr:hover td { background: #fefce8; }
 
     .pdf-preview-table th {
       background: var(--primary) !important;
@@ -88,39 +77,25 @@
       transition: all 0.2s ease;
       color: white;
     }
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px -10px rgba(10, 37, 64, 0.5);
-    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(10,37,64,0.5); }
     .btn-gold {
       background: linear-gradient(135deg, var(--gold), var(--gold-light));
       transition: all 0.2s ease;
       color: var(--primary);
     }
-    .btn-gold:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px -10px rgba(212, 175, 55, 0.5);
-    }
+    .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(212,175,55,0.5); }
     .btn-danger {
       background: linear-gradient(135deg, #dc2626, #ef4444);
       transition: all 0.2s ease;
       color: white;
     }
-    .btn-danger:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px -10px rgba(220, 38, 38, 0.5);
-    }
+    .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(220,38,38,0.5); }
     .btn-outline {
       border: 2px solid #cbd5e1;
       transition: all 0.2s ease;
       color: #475569;
     }
-    .btn-outline:hover {
-      border-color: var(--gold);
-      color: var(--primary);
-      background: #fefce8;
-      transform: translateY(-2px);
-    }
+    .btn-outline:hover { border-color: var(--gold); color: var(--primary); background: #fefce8; transform: translateY(-2px); }
 
     .spinner {
       border: 3px solid #e2e8f0;
@@ -163,16 +138,16 @@
     .nav-tab.active {
       background: linear-gradient(135deg, var(--primary), #1a3a5c);
       color: var(--gold);
-      box-shadow: 0 8px 20px -8px rgba(10, 37, 64, 0.4);
+      box-shadow: 0 8px 20px -8px rgba(10,37,64,0.4);
     }
     .nav-tab:not(.active):hover {
-      background: rgba(10, 37, 64, 0.06);
+      background: rgba(10,37,64,0.06);
       color: var(--primary);
     }
 
     input:focus, textarea:focus, select:focus {
       border-color: var(--gold) !important;
-      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2) !important;
+      box-shadow: 0 0 0 3px rgba(212,175,55,0.2) !important;
       outline: none;
     }
 
@@ -184,15 +159,13 @@
     .auth-tab-btn.active {
       background: var(--primary) !important;
       color: var(--gold) !important;
-      box-shadow: 0 4px 12px rgba(10, 37, 64, 0.3);
+      box-shadow: 0 4px 12px rgba(10,37,64,0.3);
     }
     .auth-tab-btn.inactive {
       background: #f1f5f9 !important;
       color: #64748b !important;
     }
-    .auth-tab-btn.inactive:hover {
-      background: #e2e8f0 !important;
-    }
+    .auth-tab-btn.inactive:hover { background: #e2e8f0 !important; }
 
     .gold-text { color: var(--gold); }
     .gold-border { border-color: var(--gold); }
@@ -224,8 +197,8 @@
         <button id="authSignupTab" class="auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition">Sign Up</button>
       </div>
 
-      <!-- Login -->
-      <div id="loginFormContainer">
+      <!-- Login Container -->
+      <div id="loginFormContainer" style="display:block;">
         <form id="loginForm" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-slate-700">Email</label>
@@ -240,8 +213,8 @@
         </form>
       </div>
 
-      <!-- Signup -->
-      <div id="signupFormContainer" class="hidden">
+      <!-- Signup Container (initially hidden) -->
+      <div id="signupFormContainer" style="display:none;">
         <form id="signupForm" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-slate-700">Full Name</label>
@@ -484,10 +457,10 @@
 </div> <!-- end app -->
 
 <!-- ============================================================ -->
-<!-- ===== JAVASCRIPT (full functionality) ===== -->
+<!-- ===== JAVASCRIPT ===== -->
 <script>
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  SUPABASE CONFIG – your credentials
+  //  SUPABASE CONFIG
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const SUPABASE_URL = 'https://dnhdyyvleloypnbbknay.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuaGR5eXZsZWxveXBuYmJrbmF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDMxMjksImV4cCI6MjA5ODA3OTEyOX0.XeVjT_DBKIMg-1Jd8V7IMwTsiZZB86QIW3dB-R1QjQY';
@@ -520,7 +493,7 @@
   const saveStatus = $('saveStatus');
   const headerUserName = $('headerUserName');
 
-  // Auth
+  // Auth elements
   const authPage = $('authPage');
   const mainApp = $('mainApp');
   const loginFormContainer = $('loginFormContainer');
@@ -552,28 +525,34 @@
   const pdfGenDate = $('pdfGenDate');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  AUTH – TAB SWITCHING
+  //  AUTH – TAB SWITCHING (FIXED with inline display)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function switchAuthTab(tab) {
+    const loginContainer = document.getElementById('loginFormContainer');
+    const signupContainer = document.getElementById('signupFormContainer');
+    const loginTab = document.getElementById('authLoginTab');
+    const signupTab = document.getElementById('authSignupTab');
+
     if (tab === 'login') {
-      authLoginTab.className = 'auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
-      authSignupTab.className = 'auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
-      loginFormContainer.classList.remove('hidden');
-      signupFormContainer.classList.add('hidden');
-      authError.classList.add('hidden');
-      signupError.classList.add('hidden');
+      loginContainer.style.display = 'block';
+      signupContainer.style.display = 'none';
+      loginTab.className = 'auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
+      signupTab.className = 'auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
     } else {
-      authSignupTab.className = 'auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
-      authLoginTab.className = 'auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
-      signupFormContainer.classList.remove('hidden');
-      loginFormContainer.classList.add('hidden');
-      authError.classList.add('hidden');
-      signupError.classList.add('hidden');
+      signupContainer.style.display = 'block';
+      loginContainer.style.display = 'none';
+      signupTab.className = 'auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
+      loginTab.className = 'auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
     }
   }
 
-  authLoginTab.addEventListener('click', () => switchAuthTab('login'));
-  authSignupTab.addEventListener('click', () => switchAuthTab('signup'));
+  // Attach listeners
+  document.getElementById('authLoginTab').addEventListener('click', function() {
+    switchAuthTab('login');
+  });
+  document.getElementById('authSignupTab').addEventListener('click', function() {
+    switchAuthTab('signup');
+  });
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   //  AUTH – LOGIN
@@ -862,7 +841,7 @@
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  AI PARAPHRASE (unchanged)
+  //  AI PARAPHRASE
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function paraphraseField(textareaId) {
     const el = $(textareaId);
@@ -929,7 +908,7 @@
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  SAVE / LOAD / DELETE (Supabase) – unchanged logic
+  //  SAVE / LOAD / DELETE (Supabase)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function saveReport() {
     if (!currentUser) { setStatus('Not logged in.', true); return; }
@@ -1098,7 +1077,7 @@
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  EXPORT PDF – NEW FORMAT
+  //  EXPORT PDF – matches sample format
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function exportPDF() {
     if (entries.length === 0) {
@@ -1193,7 +1172,7 @@
   window.viewAdminReport = viewAdminReport;
   window.setStatus = setStatus;
 
-  console.log('✅ Weekly Report Portal ready (Sunon Asogli style, PDF format updated)');
+  console.log('✅ Weekly Report Portal ready – Sign Up toggle works.');
 </script>
 
 </body>
