@@ -464,7 +464,7 @@
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const SUPABASE_URL = 'https://dnhdyyvleloypnbbknay.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuaGR5eXZsZWxveXBuYmJrbmF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDMxMjksImV4cCI6MjA5ODA3OTEyOX0.XeVjT_DBKIMg-1Jd8V7IMwTsiZZB86QIW3dB-R1QjQY';
-  const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabaseClient = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   //  STATE
@@ -525,33 +525,33 @@
   const pdfGenDate = $('pdfGenDate');
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  AUTH – TAB SWITCHING (FIXED with inline display)
+  //  AUTH – TAB SWITCHING (guaranteed to work)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function switchAuthTab(tab) {
-    const loginContainer = document.getElementById('loginFormContainer');
-    const signupContainer = document.getElementById('signupFormContainer');
-    const loginTab = document.getElementById('authLoginTab');
-    const signupTab = document.getElementById('authSignupTab');
-
     if (tab === 'login') {
-      loginContainer.style.display = 'block';
-      signupContainer.style.display = 'none';
-      loginTab.className = 'auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
-      signupTab.className = 'auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
+      loginFormContainer.style.display = 'block';
+      signupFormContainer.style.display = 'none';
+      authLoginTab.className = 'auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
+      authSignupTab.className = 'auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
     } else {
-      signupContainer.style.display = 'block';
-      loginContainer.style.display = 'none';
-      signupTab.className = 'auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
-      loginTab.className = 'auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
+      signupFormContainer.style.display = 'block';
+      loginFormContainer.style.display = 'none';
+      authSignupTab.className = 'auth-tab-btn active flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
+      authLoginTab.className = 'auth-tab-btn inactive flex-1 py-2.5 text-sm font-semibold rounded-xl transition';
     }
   }
 
-  // Attach listeners
-  document.getElementById('authLoginTab').addEventListener('click', function() {
-    switchAuthTab('login');
-  });
-  document.getElementById('authSignupTab').addEventListener('click', function() {
-    switchAuthTab('signup');
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  INIT AUTH TOGGLES ON DOM READY
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  document.addEventListener('DOMContentLoaded', function() {
+    // Ensure the tabs exist and attach listeners
+    const loginTab = document.getElementById('authLoginTab');
+    const signupTab = document.getElementById('authSignupTab');
+    if (loginTab && signupTab) {
+      loginTab.addEventListener('click', function() { switchAuthTab('login'); });
+      signupTab.addEventListener('click', function() { switchAuthTab('signup'); });
+    }
   });
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -568,7 +568,7 @@
       return;
     }
     showLoader(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     showLoader(false);
     if (error) {
       authError.textContent = error.message;
@@ -595,7 +595,7 @@
     }
 
     showLoader(true);
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await supabaseClient.auth.signUp({
       email,
       password,
       options: { data: { full_name: name } }
@@ -622,7 +622,7 @@
   //  AUTH – SUCCESS HANDLER
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function onAuthSuccess(user) {
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseClient
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -630,7 +630,7 @@
 
     let role = 'user';
     if (!profile) {
-      await supabase
+      await supabaseClient
         .from('profiles')
         .insert({ id: user.id, username: user.user_metadata?.full_name || user.email, role: 'user' });
     } else {
@@ -657,7 +657,7 @@
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   async function logout() {
     if (!confirm('Logout?')) return;
-    await supabase.auth.signOut();
+    await supabaseClient.auth.signOut();
     currentUser = null;
     entries = [];
     currentReportId = null;
@@ -681,7 +681,7 @@
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  TAB SWITCHING
+  //  TAB SWITCHING (main app)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function switchTab(tab) {
     document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
@@ -924,9 +924,9 @@
       const payload = { user_id: currentUser.id, user_name: name, week_start: start, week_end: end, entries };
       let result;
       if (currentReportId) {
-        result = await supabase.from('reports').update(payload).eq('id', currentReportId).eq('user_id', currentUser.id);
+        result = await supabaseClient.from('reports').update(payload).eq('id', currentReportId).eq('user_id', currentUser.id);
       } else {
-        result = await supabase.from('reports').insert([payload]).select('id').single();
+        result = await supabaseClient.from('reports').insert([payload]).select('id').single();
       }
       if (result.error) throw result.error;
       if (!currentReportId && result.data) currentReportId = result.data.id;
@@ -942,7 +942,7 @@
     if (!currentUser) return;
     showLoader(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('reports')
         .select('id, user_name, week_start, week_end, created_at')
         .eq('user_id', currentUser.id)
@@ -979,7 +979,7 @@
   async function loadReport(reportId) {
     showLoader(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('reports')
         .select('*')
         .eq('id', reportId)
@@ -1007,7 +1007,7 @@
     if (!confirm('Delete this report permanently?')) return;
     showLoader(true);
     try {
-      const { error } = await supabase.from('reports').delete().eq('id', reportId).eq('user_id', currentUser.id);
+      const { error } = await supabaseClient.from('reports').delete().eq('id', reportId).eq('user_id', currentUser.id);
       if (error) throw error;
       setStatus('Report deleted.');
       await loadSavedReports();
@@ -1027,7 +1027,7 @@
     }
     showLoader(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('reports')
         .select('id, user_id, user_name, week_start, week_end, entries, created_at')
         .order('created_at', { ascending: false });
@@ -1066,7 +1066,7 @@
   async function viewAdminReport(reportId) {
     showLoader(true);
     try {
-      const { data, error } = await supabase.from('reports').select('*').eq('id', reportId).single();
+      const { data, error } = await supabaseClient.from('reports').select('*').eq('id', reportId).single();
       if (error) throw error;
       if (!data) { alert('Report not found.'); return; }
       const entriesText = (data.entries || []).map((e, i) => `${i+1}. ${e.important} (${e.completed})`).join('\n');
@@ -1077,7 +1077,7 @@
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  EXPORT PDF – matches sample format
+  //  EXPORT PDF
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   function exportPDF() {
     if (entries.length === 0) {
@@ -1146,12 +1146,13 @@
   //  INIT
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   (async function init() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabaseClient.auth.getSession();
     if (session?.user) {
       await onAuthSuccess(session.user);
     } else {
       authPage.classList.remove('hidden');
       mainApp.classList.add('hidden');
+      // Ensure login form is visible by default
       switchAuthTab('login');
     }
   })();
