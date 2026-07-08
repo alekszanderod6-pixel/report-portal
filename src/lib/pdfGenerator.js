@@ -39,7 +39,7 @@ export async function generateReportPDF(reportData) {
   doc.text("Name: " + name, m, 46);
   doc.text("Date: " + ds, pw - m, 46, { align: "right" });
   var body = entries.map(function(e, i) {
-    var parts = e.spare_parts || "None";
+    var parts = (e.spare_parts || "None").replace(/\\n/g, "\n");
     return [String(i + 1), e.important_work || "", e.completion_process || "", e.is_completed || "In Progress", parts];
   });
   var cw = [16, 36, 76, 20, 38];

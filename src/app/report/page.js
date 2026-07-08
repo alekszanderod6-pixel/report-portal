@@ -256,7 +256,7 @@ function Editor() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700">Spare Parts Model Numbers</label>
-                    <input type="text" value={cur.spare_parts} onChange={(e) => setC("spare_parts", e.target.value)} placeholder="e.g. TV Model: HD75FRUB (or None)" className="input" />
+                    <textarea value={cur.spare_parts} onChange={(e) => setC("spare_parts", e.target.value)} placeholder={"1. Bracket Model: DS-1602ZJ\n2. Power adapter Model: 57A241500\n(or None)"} rows={3} className="input" style={{ resize: "vertical", minHeight: 60 }} />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 pt-2">
@@ -300,7 +300,7 @@ function Editor() {
                             {e.is_completed === "No" && <span className="badge badge-danger">No</span>}
                             {e.is_completed === "In Progress" && <span className="badge badge-warning">In Progress</span>}
                           </td>
-                          <td style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{e.spare_parts || "\u2014"}</td>
+                          <td style={{ fontSize: "0.75rem", color: "var(--muted)", whiteSpace: "pre-line" }}>{e.spare_parts || "\u2014"}</td>
                           <td>
                             <div className="flex items-center gap-1">
                               <button onClick={() => editEntry(i)} className="p-1 rounded hover:bg-gray-100"><svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg></button>
