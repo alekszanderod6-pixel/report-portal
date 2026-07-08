@@ -1,0 +1,64 @@
+﻿  Γû▓ Next.js 14.2.5
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+node.exe : Failed to compile.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to compile.:String) [], Remote 
+   Exception
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./src/lib/paraphraser.js
+Error: 
+  [31mx[0m Expression expected
+    ,-[[36;1;4mC:\Users\aleks\Desktop\WebDev_1\report_portal\src\lib\paraphraser.j
+s[0m:20:1]
+ [2m20[0m |   calib: 'calibration', diag: 'diagnostic',
+ [2m21[0m |   maint: 'maintenance', inst: 'installation',
+ [2m22[0m |   conn: 'connection', config: 'configuration',
+ [2m23[0m |   w: 'with', w/o: 'without',
+    : [31;1m              ^[0m
+ [2m24[0m |   approx: 'approximately', reqd: 'required',
+ [2m25[0m |   info: 'information', insp: 'inspection',
+ [2m26[0m | };
+    `----
+
+  [31mx[0m Expected a semicolon
+    ,-[[36;1;4mC:\Users\aleks\Desktop\WebDev_1\report_portal\src\lib\paraphraser.j
+s[0m:20:1]
+ [2m20[0m |   calib: 'calibration', diag: 'diagnostic',
+ [2m21[0m |   maint: 'maintenance', inst: 'installation',
+ [2m22[0m |   conn: 'connection', config: 'configuration',
+ [2m23[0m |   w: 'with', w/o: 'without',
+    : [31;1m                ^[0m
+ [2m24[0m |   approx: 'approximately', reqd: 'required',
+ [2m25[0m |   info: 'information', insp: 'inspection',
+ [2m26[0m | };
+    `----
+
+  [31mx[0m Expected ';', '}' or <eof>
+    ,-[[36;1;4mC:\Users\aleks\Desktop\WebDev_1\report_portal\src\lib\paraphraser.j
+s[0m:21:1]
+ [2m21[0m |   maint: 'maintenance', inst: 'installation',
+ [2m22[0m |   conn: 'connection', config: 'configuration',
+ [2m23[0m |   w: 'with', w/o: 'without',
+ [2m24[0m |   approx: 'approximately', reqd: 'required',
+    : [31;1m          ^^^^^^^^^^|^^^^^^^^^^[0m[33;1m^[0m
+    :                     [31;1m`-- [31;1mThis is the expression part of an 
+expression statement[0m[0m
+ [2m25[0m |   info: 'information', insp: 'inspection',
+ [2m26[0m | };
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/lib/paraphraser.js
+./src/app/report/page.js
+
+
+> Build failed because of webpack errors
