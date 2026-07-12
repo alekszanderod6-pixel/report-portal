@@ -39,8 +39,7 @@ export async function generateReportPDF(reportData) {
   doc.text("Name: " + name, m, 46);
   doc.text("Date: " + ds, pw - m, 46, { align: "right" });
   var body = entries.map(function(e, i) {
-    var parts = (e.spare_parts || "None").replace(/\\n/g, "\n");
-    return [String(i + 1), stripHtmlForPdf(e.important_work), stripHtmlForPdf(e.completion_process), e.is_completed || "In Progress", parts];
+    return [String(i + 1), stripForPdf(e.important_work), stripForPdf(e.completion_process), e.is_completed || "In Progress", stripForPdf(e.spare_parts) || "None"];
   });
   var cw = [16, 36, 76, 20, 38];
   doc.autoTable({
@@ -61,19 +60,8 @@ export async function generateReportPDF(reportData) {
       3: { cellWidth: cw[3], halign: "center", valign: "middle", fontSize: 9, cellPadding: 3 },
       4: { cellWidth: cw[4], valign: "top", fontSize: 8, cellPadding: 3 }
     },
-    headStyles: {
-      fillColor: [255, 255, 255],
-      textColor: [0, 0, 0],
-      fontStyle: "bold",
-      lineWidth: 0.3,
-      lineColor: [0, 0, 0]
-    },
-    bodyStyles: {
-      textColor: [0, 0, 0],
-      lineWidth: 0.2,
-      lineColor: [0, 0, 0],
-      cellPadding: 3
-    },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: "bold", lineWidth: 0.3, lineColor: [0, 0, 0] },
+    bodyStyles: { textColor: [0, 0, 0], lineWidth: 0.2, lineColor: [0, 0, 0], cellPadding: 3 },
     alternateRowStyles: { fillColor: [255, 255, 255] },
     tableLineColor: [0, 0, 0],
     tableLineWidth: 0.2,
@@ -82,6 +70,12 @@ export async function generateReportPDF(reportData) {
   if (pc === 0) footer();
   return doc;
 }
+
+function stripForPdf(html) {
+  if (!html) return "";
+  return html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ").trim();
+}
+
 function drawLogo(doc, x, y) {
   doc.setFillColor(232, 146, 11);
   doc.roundedRect(x, y, 13, 12, 2, 2, "F");
@@ -90,11 +84,13 @@ function drawLogo(doc, x, y) {
   doc.setTextColor(255, 255, 255);
   doc.text("EEA", x + 6.5, y + 7.5, { align: "center" });
 }
+
 function ord(n) {
   var s = ["th","st","nd","rd"];
   var v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
+
 function fmtDate(from, to) {
   if (!from || !to) return "";
   var mo = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -106,7 +102,8 @@ function fmtDate(from, to) {
   }
   return mo[fd.getMonth()] + " " + ord(fd.getDate()) + " \u2013 " + mo[td.getMonth()] + " " + ord(td.getDate()) + ", " + yr;
 }
-function stripHtmlForPdf(html) { if (!html) return "None"; var t = html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ").trim(); return t || "None"; }\n\nexport async function downloadReportPDF(data, filename) {
+
+export async function downloadReportPDF(data, filename) {
   var doc = await generateReportPDF(data);
   doc.save(filename || "Weekly_Summary_" + data.name + "_" + data.dateFrom + ".pdf");
 }
