@@ -40,7 +40,7 @@ export async function generateReportPDF(reportData) {
   doc.text("Date: " + ds, pw - m, 46, { align: "right" });
   var body = entries.map(function(e, i) {
     var parts = (e.spare_parts || "None").replace(/\\n/g, "\n");
-    return [String(i + 1), e.important_work || "", e.completion_process || "", e.is_completed || "In Progress", parts];
+    return [String(i + 1), stripHtmlForPdf(e.important_work), stripHtmlForPdf(e.completion_process), e.is_completed || "In Progress", parts];
   });
   var cw = [16, 36, 76, 20, 38];
   doc.autoTable({
@@ -106,7 +106,7 @@ function fmtDate(from, to) {
   }
   return mo[fd.getMonth()] + " " + ord(fd.getDate()) + " \u2013 " + mo[td.getMonth()] + " " + ord(td.getDate()) + ", " + yr;
 }
-export async function downloadReportPDF(data, filename) {
+function stripHtmlForPdf(html) { if (!html) return "None"; var t = html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ").trim(); return t || "None"; }\n\nexport async function downloadReportPDF(data, filename) {
   var doc = await generateReportPDF(data);
   doc.save(filename || "Weekly_Summary_" + data.name + "_" + data.dateFrom + ".pdf");
 }
