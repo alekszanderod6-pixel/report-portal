@@ -10,25 +10,55 @@ import { showToast } from "@/components/Toast";
 
 function Editor() {
   const searchParams = useSearchParams();
-  const editId = searchParams.get("id");
-  const fileRef = useRef(null);
-  const workDivRef = useRef(null);
-  const processDivRef = useRef(null);
+  var editId = searchParams.get("id");
+  var fileRef = useRef(null);
+  var workRef = useRef(null);
+  var processRef = useRef(null);
+  var partsRef = useRef(null);
 
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(!!editId);
-  const [saving, setSaving] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [paraphrasing, setParaphrasing] = useState(null);
-  const [logoBase64, setLogoBase64] = useState(null);
-  const [reportName, setReportName] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [reportId, setReportId] = useState(null);
-  const [reportStatus, setReportStatus] = useState("draft");
-  const [entries, setEntries] = useState([]);
-  const [cur, setCur] = useState({ important_work: "", completion_process: "", is_completed: "In Progress", spare_parts: "" });
-  const [editIdx, setEditIdx] = useState(null);
+  var profileState = useState(null);
+  var profile = profileState[0];
+  var setProfile = profileState[1];
+  var loadingState = useState(true);
+  var loading = loadingState[0];
+  var setLoading = loadingState[1];
+  var savingState = useState(false);
+  var saving = savingState[0];
+  var setSaving = savingState[1];
+  var exportingState = useState(false);
+  var exporting = exportingState[0];
+  var setExporting = exportingState[1];
+  var paraphrasingState = useState(null);
+  var paraphrasing = paraphrasingState[0];
+  var setParaphrasing = paraphrasingState[1];
+  var logoState = useState(null);
+  var logoBase64 = logoState[0];
+  var setLogoBase64 = logoState[1];
+
+  var nameState = useState("");
+  var reportName = nameState[0];
+  var setReportName = nameState[1];
+  var fromState = useState("");
+  var dateFrom = fromState[0];
+  var setDateFrom = fromState[1];
+  var toState = useState("");
+  var dateTo = toState[0];
+  var setDateTo = toState[1];
+  var idState = useState(null);
+  var reportId = idState[0];
+  var setReportId = idState[1];
+  var statusState = useState("draft");
+  var reportStatus = statusState[0];
+  var setReportStatus = statusState[1];
+  var entriesState = useState([]);
+  var entries = entriesState[0];
+  var setEntries = entriesState[1];
+  var editIdxState = useState(null);
+  var editIdx = editIdxState[0];
+  var setEditIdx = editIdxState[1];
+  var completedState = useState("In Progress");
+  var isCompleted = completedState[0];
+  var setIsCompleted = completedState[1];
 
   useEffect(function() { init(); }, []);
 
@@ -59,74 +89,103 @@ function Editor() {
   }
 
   function handleLogo(e) {
-    var file = e.target.files[0;
+    var file = e.target.files[0];
     if (!file) return;
     if (file.size > 2000000) { showToast("Logo must be under 2MB", "warning"); return; }
     var reader = new FileReader();
-    reader.onload = function(ev) { setLogoBase64(ev.target.result); if (reportId) { try { localStorage.setItem("logo_" + reportId, ev.target.result); } catch(x) {} } showToast("Logo uploaded!", "success"); };
+    reader.onload = function(ev) {
+      setLogoBase64(ev.target.result);
+      if (reportId) { try { localStorage.setItem("logo_" + reportId, ev.target.result); } catch(x) {}
+      showToast("Logo uploaded!", "success");
+    };
     reader.readAsDataURL(file);
   }
 
-  function removeLogo() { setLogoBase64(null); if (reportId) { try { localStorage.removeItem("logo_" + reportId); } catch(x) {} } if (fileRef.current) fileRef.current.value = ""; }
-
-  var setC = function(f, v) { setCur(function(p) { var n = {}; for (var k in p) n[k] = p[k]; n[f] = v; return n; }); };
-
-  function getDivText(ref) {
-    return ref.current ? ref.current.innerText : "";
+  function removeLogo() {
+    setLogoBase64(null);
+    if (reportId) { try { localStorage.removeItem("logo_" + reportId); } catch(x) {}
+    if (fileRef.current) fileRef.current.value = "";
   }
 
-  function doEnhance(field) {
-    var refMap = { important_work: workDivRef, completion_process: processDivRef };
-    var ref = refMap[field];
-    if (!ref || !ref.current) { showToast("Could not read field", "error"); return; }
-    var plain = getDivText(ref);
-    if (!plain.trim()) { showToast("Type something first", "warning"); return; }
-    setParaphrasing(field);
-    var enhanced = paraphraseField(plain);
-    if (!enhanced) { setParaphrasing(null); showToast("No improvements suggested. Try writing in numbered steps: 1. Inspected... 2. Replaced... 3. Results: ...", "info"); return; }
-    ref.current.innerText = enhanced;
-    setC(field, enhanced);
-    setParaphrasing(null);
-    showToast("Text enhanced with technical writing improvements!", "success");
+  function enhance(ref) {
+    setParaphrasing("active");
+    setTimeout(function() {
+      var html = ref.current ? ref.current.innerHTML : "";
+      var plainText = stripHtml(html);
+      if (plainText.trim().length < 5) { setParaphrasing(null); showToast("Type more text first", "warning"); return; }
+      var enhanced = paraphraseField(plainText);
+      if (ref.current) ref.current.innerHTML = enhanced;
+      setParaphrasing(null);
+      showToast("Text enhanced with technical writing improvements", "success");
+    }, 200);
   }
+
+  function getRefValue(ref) {
+    return ref.current ? ref.current.innerHTML : "";
+  }
+
+  function clearRefs() {
+    if (workRef.current) workRef.current.innerHTML = "";
+    if (processRef.current) processRef.current.innerHTML = "";
+    if (partsRef.current) partsRef.current.innerHTML = "";
+    setIsCompleted("In Progress");
+  }
+
+  function loadEntryToRefs(e) {
+    if (workRef.current) workRef.current.innerHTML = e.important_work;
+    if (processRef.current) processRef.current.innerHTML = e.completion_process;
+    if (partsRef.current) partsRef.current.innerHTML = e.spare_parts;
+    setIsCompleted(e.is_completed);
+  }
+
+  useEffect(function() {
+    if (editIdx !== null && entries[editIdx]) {
+      loadEntryToRefs(entries[editIdx]);
+    }
+  }, [editIdx, entries]);
 
   function addOrUpdate() {
-    var work = getDivText(workDivRef);
-    var process = getDivText(processDivRef);
-    var parts = document.getElementById("spare_parts_area") ? document.getElementById("spare_parts_area").value : cur.spare_parts;
-    if (!work.trim()) { showToast("Enter the important work", "warning"); return; }
-    if (!process.trim()) { showToast("Enter completion process", "warning"); return; }
+    var workHtml = getRefValue(workRef);
+    var processHtml = getRefValue(processRef);
+    var partsHtml = getRefValue(partsRef);
+    var workPlain = stripHtml(workHtml);
+    var processPlain = stripHtml(processHtml);
+    if (!workPlain.trim()) { showToast("Enter the important work", "warning"); return; }
+    if (!processPlain.trim()) { showToast("Enter completion process", "warning"); return; }
     if (editIdx !== null) {
-      setEntries(function(p) { return p.map(function(e, i) { if (i === editIdx) { var n = {}; for (var k in e) n[k] = e[k]; n.important_work = work; n.completion_process = process; n.spare_parts = parts; return n; } return e; }); });
+      setEntries(function(p) {
+        return p.map(function(e, i) {
+          if (i === editIdx) {
+            return { id: e.id, serial_number: e.serial_number, important_work: workHtml, completion_process: processHtml, is_completed: isCompleted, spare_parts: partsHtml };
+          }
+          return e;
+        });
+      });
       setEditIdx(null);
+      clearRefs();
       showToast("Entry updated", "success");
     } else {
-      setEntries(function(p) { var n = { id: null, serial_number: p.length + 1, important_work: work, completion_process: process, is_completed: cur.is_completed, spare_parts: parts }; return p.concat([n]); });
+      setEntries(function(p) {
+        return p.concat([{ id: null, serial_number: p.length + 1, important_work: workHtml, completion_process: processHtml, is_completed: isCompleted, spare_parts: partsHtml }]);
+      });
+      clearRefs();
       showToast("Entry added", "success");
     }
-    setCur({ important_work: "", completion_process: "", is_completed: "In Progress", spare_parts: "" });
-    if (workDivRef.current) workDivRef.current.innerText = "";
-    if (processDivRef.current) processDivRef.current.innerText = "";
-    var sp = document.getElementById("spare_parts_area");
-    if (sp) sp.value = "";
   }
 
   function editEntry(i) {
-    var e = entries[i];
-    setCur({ important_work: e.important_work, completion_process: e.completion_process, is_completed: e.is_completed, spare_parts: e.spare_parts });
+    loadEntryToRefs(entries[i]);
     setEditIdx(i);
-    setTimeout(function() {
-      if (workDivRef.current) workDivRef.current.innerText = e.important_work;
-      if (processDivRef.current) processDivRef.current.innerText = e.completion_process;
-      var sp = document.getElementById("spare_parts_area");
-      if (sp) sp.value = e.spare_parts;
-    }, 50);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function removeEntry(i) {
     if (!confirm("Remove this entry?")) return;
-    setEntries(function(p) { return p.filter(function(_, x) { return x !== i; }).map(function(e, x) { var n = {}; for (var k in e) n[k] = e[k]; n.serial_number = x + 1; return n; }); });
+    setEntries(function(p) {
+      return p.filter(function(_, x) { return x !== i; }).map(function(e, x) {
+        return { id: e.id, serial_number: x + 1, important_work: e.important_work, completion_process: e.completion_process, is_completed: e.is_completed, spare_parts: e.spare_parts };
+      });
+    });
     showToast("Entry removed", "info");
   }
 
@@ -144,14 +203,14 @@ function Editor() {
         var resp = await supabase.from("reports").insert({ user_id: profile.id, name: reportName.trim(), date_from: dateFrom, date_to: dateTo, status: status }).select().single();
         rid = resp.data.id; setReportId(rid);
       }
-      if (logoBase64 && rid) { try { localStorage.setItem("logo_" + rid, logoBase64); } catch(x) {} }
+      if (logoBase64 && rid) { try { localStorage.setItem("logo_" + rid, logoBase64); } catch(x) {}
       if (entries.length) {
         var rows = entries.map(function(e, i) { return { report_id: rid, serial_number: i + 1, important_work: e.important_work, completion_process: e.completion_process, is_completed: e.is_completed, spare_parts: e.spare_parts || "" }; });
         await supabase.from("report_entries").insert(rows);
       }
       setReportStatus(status);
       showToast(status === "completed" ? "Report completed!" : "Draft saved!", "success");
-    } catch (err) { showToast("Save failed: " + (err.message || "Unknown error"), "error"); }
+    } catch (err) { showToast("Save failed", "error"); }
     finally { setSaving(false); }
   }
 
@@ -162,36 +221,13 @@ function Editor() {
     try {
       await downloadReportPDF({ name: reportName, dateFrom: dateFrom, dateTo: dateTo, entries: entries, logoBase64: logoBase64 }, "Weekly_Summary_" + reportName.replace(/\s+/g, "_") + "_" + dateFrom + ".pdf");
       showToast("PDF downloaded!", "success");
-    } catch (err) { showToast("PDF failed: " + (err.message || "Unknown error"), "error"); }
+    } catch (err) { showToast("PDF failed", "error"); }
     finally { setExporting(false); }
   }
 
   var fmtD = function(d) { return d ? new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""; };
 
   if (!profile || loading) return <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}><div className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }} /></div>;
-
-  var tb = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: "34px", height: "32px", borderRadius: "6px", border: "1.5px solid var(--border)", background: "white", cursor: "pointer", fontSize: "14px", fontWeight: "700", color: "var(--fg)", transition: "all 0.15s", flexShrink: 0 };
-  var tbHover = ":hover { border-color: var(--accent); color: var(--accent); background: #FFFBEB; }";
-  var dv = { width: "1px", background: "var(--border)", margin: "0 5px", height: "20px", alignSelf: "center", flexShrink: 0 };
-
-  function FormatBar(props) {
-    return (
-      <div style={{ display: "flex", gap: "4px", marginBottom: "6px", alignItems: "center", flexWrap: "wrap" }}>
-        <button type="button" onClick={function(){ document.execCommand("bold"); }} className={tb + tbHover} title="Bold (select text in the box, then click Bold"><b>B</b></button>
-        <button type="button" onClick={function(){ document.execCommand("italic"); }} className={tb + tbHover} title="Italic (select text, then click Italic"><i style={{ fontFamily: "Georgia, serif" }}>I</i></button>
-        <button type="button" onClick={function(){ document.execCommand("underline"); }} className={tb + tbHover} title="Underline (select text, then click Underline"><u>U</u></button>
-        {props.showEnhance ? (
-          <>
-            <div style={dv} />
-            <button type="button" onClick={function(){ doEnhance(props.field); }} disabled={paraphrasing === props.field}
-              style={{ ...tb, ...(paraphrasing === props.field ? { borderColor: "var(--accent)", background: "#FFFBEB", cursor: "wait" } : {} )} >
-              {paraphrasing ? <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} /> : <span style={{ fontSize: "16px" }}>&#10024;</span>}
-            </button>
-          </>
-        ) : null}
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
@@ -203,8 +239,14 @@ function Editor() {
             <p className="text-gray-500 text-sm mt-1">{editId ? "Editing - " + (reportStatus === "completed" ? "Completed" : "Draft") : "Fill in your weekly work summary"}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={function(){ save("draft"); }} disabled={saving} className="btn btn-outline">{saving ? <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : null}{saving ? "Saving..." : "Save Draft"}</button>
-            <button onClick={exportPDF} disabled={exporting || !entries.length} className="btn btn-primary">{exporting ? <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : null}{exporting ? "Generating..." : "Export PDF"}</button>
+            <button onClick={function(){ save("draft"); }} disabled={saving} className="btn btn-outline">
+              {saving ? <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : null}
+              {saving ? "Saving..." : "Save Draft"}
+            </button>
+            <button onClick={exportPDF} disabled={exporting || !entries.length} className="btn btn-primary">
+              {exporting ? <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : null}
+              {exporting ? "Generating..." : "Export PDF"}
+            </button>
           </div>
         </div>
 
@@ -213,15 +255,31 @@ function Editor() {
             <div className="bg-white rounded-xl p-6" style={{ border: "1px solid var(--border)" }}>
               <h2 className="font-display font-semibold text-lg mb-4" style={{ color: "var(--navy)" }}>Report Information</h2>
               <div className="grid sm:grid-cols-3 gap-4 mb-4">
-                <div><label className="block text-sm font-medium mb-1.5 text-gray-700">Name</label><input type="text" value={reportName} onChange={function(e){ setReportName(e.target.value); }} placeholder="Your full name" className="input" /></div>
-                <div><label className="block text-sm font-medium mb-1.5 text-gray-700">Date From</label><input type="date" value={dateFrom} onChange={function(e){ setDateFrom(e.target.value); }} className="input" /></div>
-                <div><label className="block text-sm font-medium mb-1.5 text-gray-700">Date To</label><input type="date" value={dateTo} onChange={function(e){ setDateTo(e.target.value); }} className="input" /></div>
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium mb-1.5 text-gray-700">Name</label>
+                  <input type="text" value={reportName} onChange={function(e){ setReportName(e.target.value); }} placeholder="Your full name" className="input" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-gray-700">Date From</label>
+                  <input type="date" value={dateFrom} onChange={function(e){ setDateFrom(e.target.value); }} className="input" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-gray-700">Date To</label>
+                  <input type="date" value={dateTo} onChange={function(e){ setDateTo(e.target.value); }} className="input" />
+                </div>
               </div>
               <div className="flex items-center gap-4 p-4 rounded-lg" style={{ background: "#F8FAFC", border: "1px dashed var(--border)" }}>
                 <div>
-                  {logoBase64 ? <img src={logoBase64} alt="Logo" className="w-14 h-14 rounded-lg object-contain" style={{ border: "1px solid var(--border)" /> : <div className="w-14 h-14 rounded-lg flex items-center justify-center" style={{ background: "var(--accent)" }}><span className="text-white font-bold text-xs">LOGO</span></div>}
+                  {logoBase64 ? (
+                    <img src={logoBase64} alt="Logo" className="w-14 h-14 rounded-lg object-contain" style={{ border: "1px solid var(--border)" }} />
+                  ) : (
+                    <div className="w-14 h-14 rounded-lg flex items-center justify-center" style={{ background: "var(--accent)" }}><span className="text-white font-bold text-xs">LOGO</span></div>
+                  )}
                 </div>
-                <div className="flex-1"><p className="text-sm font-medium text-gray-700">Company Logo</p><p className="text-xs text-gray-400">Upload to appear on PDF</p></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-700">Company Logo</p>
+                  <p className="text-xs text-gray-400">Upload to appear on PDF</p>
+                </div>
                 <div className="flex items-center gap-2">
                   <input type="file" ref={fileRef} accept="image/*" onChange={handleLogo} className="hidden" />
                   <button onClick={function(){ fileRef.current.click(); }} className="btn btn-outline btn-sm">Upload</button>
@@ -234,31 +292,28 @@ function Editor() {
               <h2 className="font-display font-semibold text-lg mb-1" style={{ color: "var(--navy)" }}>{editIdx !== null ? "Edit Entry #" + (editIdx + 1) : "Add Work Entry"}</h2>
               <p className="text-gray-400 text-xs mb-4">Serial Number: {editIdx !== null ? editIdx + 1 : entries.length + 1}</p>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 text-gray-700">Important Work</label>
-                  <FormatBar showEnhance={true} field="important_work" paraphrasing={paraphrasing} onEnhance={function(){ doEnhance("important_work"); }} />
-                  <div ref={workDivRef} contentEditable className="input" style={{ minHeight: 80, resize: "vertical", lineHeight: "1.6", overflowY: "auto", maxHeight: "500px", whiteSpace: "pre-wrap", wordBreak: "break-word" }} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 text-gray-700">Completion, Process And Results</label>
-                  <FormatBar showEnhance={true} field="completion_process" paraphrasing={paraphrasing} onEnhance={function(){ doEnhance("completion_process"); }} />
-                  <div ref={processDivRef} contentEditable className="input" style={{ minHeight: 140, resize: "vertical", lineHeight: "1.6", overflowY: "auto", maxHeight: "500px", whiteSpace: "pre-wrap", wordBreak: "break-word" }} />
-                </div>
+                <RichEditor ref={workRef} label="Important Work" placeholder="e.g. Installation of Two New 75 Inches Huawei Television at CCR for CCTV Display" minH={60} onEnhance={function(){ enhance(workRef); }} isEnhancing={paraphrasing === "active"} />
+                <RichEditor ref={processRef} label="Completion, Process And Results" placeholder={"1. Set laser level...\n2. Projected laser...\nResults: Two new TVs mounted level..."} minH={100} onEnhance={function(){ enhance(processRef); }} isEnhancing={paraphrasing === "active"} />
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700">Is it Completed?</label>
-                    <select value={cur.is_completed} onChange={function(e){ setC("is_completed", e.target.value); }} className="input">
-                      <option value="Yes">Yes</option><option value="No">No</option><option value="In Progress">In Progress</option>
+                    <select value={isCompleted} onChange={function(e){ setIsCompleted(e.target.value); }} className="input">
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                      <option value="In Progress">In Progress</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700">Spare Parts Model Numbers</label>
-                    <textarea id="spare_parts_area" className="input" placeholder={"1. Bracket Model: DS-1602ZJ\n2. Power adapter: 57A241500\n(or None)"} rows={3} style={{ resize: "vertical", minHeight: 60 }} />
+                    <RichEditor ref={partsRef} label="" placeholder={"1. Bracket Model: DS-1602ZJ\n2. Power adapter: 57A241500\n(or None)"} minH={60} onEnhance={function(){ enhance(partsRef); }} isEnhancing={paraphrasing === "active"} noLabel={true} />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 pt-2">
-                  <button onClick={addOrUpdate} className="btn btn-navy"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d={editIdx !== null ? "M4.5 12.75l6 6 9-13.5" : "M12 4v16m8-8H4"} /></svg>{editIdx !== null ? "Update Entry" : "Add Entry"}</button>
-                  {editIdx !== null ? <button onClick={function(){ setEditIdx(null); setCur({ important_work: "", completion_process: "", is_completed: "In Progress", spare_parts: "" }); }} className="btn btn-outline">Cancel Edit</button> : null}
+                  <button onClick={addOrUpdate} className="btn btn-navy">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d={editIdx !== null ? "M4.5 12.75l6 6 9-13.5" : "M12 4v16m8-8H4"} /></svg>
+                    {editIdx !== null ? "Update Entry" : "Add Entry"}
+                  </button>
+                  {editIdx !== null ? <button onClick={function(){ setEditIdx(null); clearRefs(); }} className="btn btn-outline">Cancel Edit</button> : null}
                 </div>
               </div>
             </div>
@@ -268,23 +323,38 @@ function Editor() {
                 <h2 className="font-display font-semibold text-lg" style={{ color: "var(--navy)" }}>Report Entries</h2>
                 <span className="text-sm text-gray-400">{entries.length} entr{entries.length !== 1 ? "ies" : "y"}</span>
               </div>
-              {!entries.length ? <div className="p-8 text-center text-gray-400 text-sm">No entries yet.</div> : (
+              {!entries.length ? (
+                <div className="p-8 text-center text-gray-400 text-sm">No entries yet. Add your first work item above.</div>
+              ) : (
                 <div className="overflow-x-auto">
                   <table className="report-preview-table">
-                    <thead><tr><th style={{ width: 40 }}>S/N</th><th style={{ width: "20%" }}>Important Work</th><th style={{ width: "40%" }}>Completion, Process And Results</th><th style={{ width: 80 }}>Status</th><th style={{ width: "18%" }}>Spare Parts</th><th style={{ width: 70 }}>Actions</th></tr></thead>
+                    <thead><tr>
+                      <th style={{ width: 40 }}>S/N</th>
+                      <th style={{ width: "20%" }}>Important Work</th>
+                      <th style={{ width: "40%" }}>Completion, Process And Results</th>
+                      <th style={{ width: 80 }}>Completed?</th>
+                      <th style={{ width: "18%" }}>Spare Parts</th>
+                      <th style={{ width: 70 }}>Actions</th>
+                    </tr></thead>
                     <tbody>
                       {entries.map(function(e, i) {
                         return (
                           <tr key={i}>
                             <td className="text-center font-semibold" style={{ color: "var(--navy)" }}>{i + 1}</td>
-                            <td><div style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{e.important_work}</div></td>
-                            <td><div style={{ display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden", whiteSpace: "pre-line" }}>{e.completion_process}</div></td>
-                            <td className="text-center">{e.is_completed === "Yes" ? <span className="badge badge-success">Yes</span> : e.is_completed === "No" ? <span className="badge badge-danger">No</span> : <span className="badge badge-warning">In Progress</span>}</td>
-                            <td style={{ fontSize: "0.75rem", color: "var(--muted)", whiteSpace: "pre-line" }}>{e.spare_parts || "\u2014"}</td>
-                            <td><div className="flex items-center gap-1">
-                              <button onClick={function(){ editEntry(i); }} className="p-1 rounded hover:bg-gray-100"><svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg></button>
-                              <button onClick={function(){ removeEntry(i); }} className="p-1 rounded hover:bg-red-50"><svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg></button>
-                            </div></td>
+                            <td><div style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }} dangerouslySetInnerHTML={{ __html: e.important_work }} /></td>
+                            <td><div style={{ display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden", whiteSpace: "pre-line" }} dangerouslySetInnerHTML={{ __html: e.completion_process }} /></td>
+                            <td className="text-center">
+                              {e.is_completed === "Yes" ? <span className="badge badge-success">Yes</span> : null}
+                              {e.is_completed === "No" ? <span className="badge badge-danger">No</span> : null}
+                              {e.is_completed === "In Progress" ? <span className="badge badge-warning">In Progress</span> : null}
+                            </td>
+                            <td style={{ fontSize: "0.75rem", color: "var(--muted)", whiteSpace: "pre-line" }} dangerouslySetInnerHTML={{ __html: e.spare_parts || "\u2014" }} />
+                            <td>
+                              <div className="flex items-center gap-1">
+                                <button onClick={function(){ editEntry(i); }} className="p-1 rounded hover:bg-gray-100"><svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg></button>
+                                <button onClick={function(){ removeEntry(i); }} className="p-1 rounded hover:bg-red-50"><svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg></button>
+                              </div>
+                            </td>
                           </tr>
                         );
                       })}
@@ -300,17 +370,38 @@ function Editor() {
               <h3 className="font-display font-semibold text-sm mb-3" style={{ color: "var(--navy)" }}>Report Summary</h3>
               <div className="space-y-3 text-sm">
                 {[["Period", fmtD(dateFrom) + " \u2013 " + fmtD(dateTo)], ["Entries", entries.length], ["Completed", entries.filter(function(e){ return e.is_completed === "Yes"; }).length], ["In Progress", entries.filter(function(e){ return e.is_completed === "In Progress"; }).length], ["Not Done", entries.filter(function(e){ return e.is_completed === "No"; }).length]].map(function(item, i) {
-                  return <div key={i} className="flex justify-between"><span className="text-gray-500">{item[0]}</span><span className="font-medium" style={i === 2 ? { color: "var(--success)" } : i === 3 ? { color: "var(--warning)" } : i === 4 ? { color: "var(--danger)" } : {}}>{item[1]}</span></div>;
+                  return (
+                    <div key={i} className="flex justify-between">
+                      <span className="text-gray-500">{item[0]}</span>
+                      <span className="font-medium" style={i === 2 ? { color: "var(--success)" } : i === 3 ? { color: "var(--warning)" } : i === 4 ? { color: "var(--danger)" } : {}}>{item[1]}</span>
+                    </div>
+                  );
                 })}
-                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "0.75rem" }} className="flex justify-between"><span className="text-gray-500">Status</span>{reportStatus === "completed" ? <span className="badge badge-success">Completed</span> : <span className="badge badge-warning">Draft</span>}</div>
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "0.75rem" }} className="flex justify-between">
+                  <span className="text-gray-500">Status</span>
+                  {reportStatus === "completed" ? <span className="badge badge-success">Completed</span> : <span className="badge badge-warning">Draft</span>}
+                </div>
               </div>
             </div>
             <div className="rounded-xl p-5" style={{ background: "linear-gradient(135deg, #0C2340 0%, #1A3A5C 100%)", border: "1px solid rgba(232,146,11,0.2)" }}>
-              <h3 className="font-display font-semibold text-sm text-white mb-3">How to Use</h3>
-              <div className="space-y-2 text-xs text-gray-400 leading-relaxed">
-                <p><span style={{ color: "var(--accent)" }}>Bold/Italic/Underline:</span> Select text in the box, then click the button. Works with keyboard shortcuts too (Ctrl+B, Ctrl+I, Ctrl+U).</p>
-                <p><span style={{ color: "var(--accent)" }}>Enhance:</span> Click Enhance to rewrite with AI technical writing.</p>
-                <p><span style={{ color: "var(--accent)" }}>Best results:</span> Write numbered steps: 1. Inspected... 2. Replaced... 3. Results: ...</p>
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-5 h-5" style={{ color: "var(--accent)" }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+                <h3 className="font-display font-semibold text-sm text-white">Tools Guide</h3>
+              </div>
+              <p className="text-gray-400 text-xs leading-relaxed mb-3">Select text then click a formatting button. Use Enhance for AI technical writing.</p>
+              {["B = Bold text", "I = Italic text", "U = Underline text", "Left/Center = Alignment", "Enhance = AI technical writing"].map(function(t, i) {
+                return <div key={i} className="flex items-center gap-2 text-xs text-gray-400 mb-1"><div className="w-1 h-1 rounded-full" style={{ background: "var(--accent)" }} />{t}</div>;
+              })}
+            </div>
+            <div className="bg-white rounded-xl p-5" style={{ border: "1px solid var(--border)" }}>
+              <h3 className="font-display font-semibold text-sm mb-3" style={{ color: "var(--navy)" }}>Tips</h3>
+              <div className="space-y-2 text-xs text-gray-500 leading-relaxed">
+                <p>Upload your company logo to appear on the PDF.</p>
+                <p>Select text, then click B/I/U to format. Click Enhance for AI rewrite.</p>
+                <p>Save as draft anytime and continue later from dashboard.</p>
+                <p>Number your steps: 1., 2., 3. for clarity.</p>
+                <p>Include a Results: line at the end of completion process.</p>
+                <p>Export PDF auto-saves and marks completed.</p>
               </div>
             </div>
           </div>
@@ -320,21 +411,77 @@ function Editor() {
   );
 }
 
-function FormatBar(props) {
+function RichEditor(props) {
+  var ref = props.ref;
+  var toolbarBtnStyle = {
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    width: "32px", height: "28px", borderRadius: "4px",
+    border: "1px solid var(--border)", background: "white",
+    cursor: "pointer", fontSize: "13px", fontWeight: "600",
+    color: "var(--fg)", transition: "all 0.15s", fontFamily: "'DM Sans', sans-serif"
+  };
+  var dividerStyle = { width: "1px", background: "var(--border)", height: "18px", alignSelf: "center", margin: "0 4px" };
+
+  function handleInput() {
+    if (ref.current && ref.current.innerHTML === "<br>") {
+      ref.current.innerHTML = "";
+    }
+  }
+
   return (
-    <div style={{ display: "flex", gap: "4px", marginBottom: "6px", alignItems: "center", flexWrap: "wrap" }}>
-      <button type="button" onClick={function(){ document.execCommand("bold"); }} className={tb + " " + tbHover} title="Bold (or Ctrl+B)"><b>B</b></button>
-      <button type="button" onClick={function(){ document.execCommand("italic"); }} className={tb + " " + tbHover} title="Italic (or Ctrl+I)"><i style={{ fontFamily: "Georgia, serif" }}>I</i></button>
-      <button type="button" onClick={function(){ document.execCommand("underline"); }} className={tb + " " + tbHover} title="Underline (or Ctrl+U)"><u>U</u></button>
-      {props.showEnhance ? (
-        <>
-          <div style={dv} />
-          <button type="button" onClick={function(){ props.onEnhance(); }} disabled={props.paraphrasing}
-            style={props.paraphrasing ? { ...tb, borderColor: "var(--accent)", background: "#FFFBEB", cursor: "wait" } : { ...tb }}>
-            {props.paraphrasing ? <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} /> : <span style={{ fontSize: "16px" }}>&#10024;</span>}
+    <div>
+      {!props.noLabel ? (
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-sm font-medium text-gray-700">{props.label}</label>
+          <button
+            type="button"
+            onMouseDown={function(e){ e.preventDefault(); }}
+            onClick={props.onEnhance}
+            disabled={props.isEnhancing}
+            className="btn btn-sm"
+            style={{ background: "#F3F4F6", color: "var(--navy)", fontSize: "0.7rem" }}
+          >
+            {props.isEnhancing
+              ? <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+              : <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+            }
+            Enhance
           </button>
-        </>
-      ) : null}
+        </div>
+      ) : (
+        <div className="flex items-center justify-end mb-1.5">
+          <button
+            type="button"
+            onMouseDown={function(e){ e.preventDefault(); }}
+            onClick={props.onEnhance}
+            disabled={props.isEnhancing}
+            className="btn btn-sm"
+            style={{ background: "#F3F4F6", color: "var(--navy)", fontSize: "0.7rem" }}
+          >
+            {props.isEnhancing
+              ? <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+              : <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+            }
+            Enhance
+          </button>
+        </div>
+      )}
+      <div style={{ display: "flex", gap: "3px", marginBottom: "4px" }}>
+        <button type="button" onMouseDown={function(e){ e.preventDefault(); }} onClick={function(){ if (ref.current) ref.current.focus(); document.execCommand("bold", false, null); }} style={toolbarBtnStyle} title="Bold"><b>B</b></button>
+        <button type="button" onMouseDown={function(e){ e.preventDefault(); }} onClick={function(){ if (ref.current) ref.current.focus(); document.execCommand("italic", false, null); }} style={toolbarBtnStyle} title="Italic"><i style={{ fontFamily: "serif" }}>I</i></button>
+        <button type="button" onMouseDown={function(e){ e.preventDefault(); }} onClick={function(){ if (ref.current) ref.current.focus(); document.execCommand("underline", false, null); }} style={toolbarBtnStyle} title="Underline"><u>U</u></button>
+        <div style={dividerStyle} />
+        <button type="button" onMouseDown={function(e){ e.preventDefault(); }} onClick={function(){ if (ref.current) ref.current.focus(); document.execCommand("justifyLeft", false, null); }} style={toolbarBtnStyle} title="Align Left" className="text-xs">Left</button>
+        <button type="button" onMouseDown={function(e){ e.preventDefault(); }} onClick={function(){ if (ref.current) ref.current.focus(); document.execCommand("justifyCenter", false, null); }} style={toolbarBtnStyle} title="Align Center" className="text-xs">Center</button>
+      </div>
+      <div
+        ref={ref}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        data-placeholder={props.placeholder}
+        style={{ minHeight: props.minH || 80 }}
+      />
     </div>
   );
 }
