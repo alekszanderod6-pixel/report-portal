@@ -4,34 +4,17 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase, getCurrentProfile } from "@/lib/supabase";
 import { downloadReportPDF } from "@/lib/pdfGenerator";
-import { paraphraseField, stripHtml } from "@/lib/parraphraser";
+import { paraphraseField, stripHtml } from "@/lib/paraphraser";
 import Navbar from "@/components/Navbar";
 import { showToast } from "@/components/Toast";
-
-function applyFormat(tag) {
-  var ta = document.activeElement;
-  if (!ta || ta.type !== "textarea") { showToast("Click inside a textarea first, then click the format button", "info"); return; }
-  var start = ta.selectionStart;
-  var end = ta.selectionEnd;
-  if (start === end) { showToast("Select text in the textarea first, then click the format button", "info"); return; }
-  var selected = ta.value.substring(start, end);
-  if (!selected.trim()) return;
-  if (tag === "bold") selected = "**" + selected + "**";
-  if (tag === "italic") selected = "_" + selected + "_";
-  if (tag === "underline") selected + "";
-  if (tag === "underline") selected = "__" + selected + "__";
-  ta.setRangeText(start, end, selected);
-  ta.focus();
-  showToast("Format applied! For PDF, use **bold**, _italic_, __underline__ syntax (Markdown)", "success");
-}
 
 function Editor() {
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
   const fileRef = useRef(null);
-  const workRef = useRef(null);
-  const processRef = useRef(null);
-  const partsRef = useRef(null);
+  const workDivRef = useRef(null);
+  const processDivRef = useRef(null);
+
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(!!editId);
   const [saving, setSaving] = useState(false);
@@ -84,29 +67,33 @@ function Editor() {
     reader.readAsDataURL(file);
   }
 
-  function removeLogo() { setLogoBase64(null); if (reportId) { try { localStorage.removeItem("logo"); } catch(x) {} } if (fileRef.current) fileRef.current.value = ""; }
+  function removeLogo() { setLogoBase64(null); if (reportId) { try { localStorage.removeItem("logo_" + reportId); } catch(x) {} } if (fileRef.current) fileRef.current.value = ""; }
 
   var setC = function(f, v) { setCur(function(p) { var n = {}; for (var k in p) n[k] = p[k]; n[f] = v; return n; }); };
 
+  function getDivText(ref) {
+    return ref.current ? ref.current.innerText : "";
+  }
+
   function doEnhance(field) {
-    var refMap = { important_work: workRef, completion_process: processRef };
+    var refMap = { important_work: workDivRef, completion_process: processDivRef };
     var ref = refMap[field];
     if (!ref || !ref.current) { showToast("Could not read field", "error"); return; }
-    var plain = ref.current.value;
+    var plain = getDivText(ref);
     if (!plain.trim()) { showToast("Type something first", "warning"); return; }
     setParaphrasing(field);
     var enhanced = paraphraseField(plain);
-    if (!enhanced) { setParaphrasing(null); showToast("No improvements suggested. Try numbered steps like: 1. Inspected... 2. Replaced... 3. Results: ...", "info"); return; }
-    ref.current.value = enhanced;
+    if (!enhanced) { setParaphrasing(null); showToast("No improvements suggested. Try writing in numbered steps: 1. Inspected... 2. Replaced... 3. Results: ...", "info"); return; }
+    ref.current.innerText = enhanced;
     setC(field, enhanced);
     setParaphrasing(null);
     showToast("Text enhanced with technical writing improvements!", "success");
   }
 
   function addOrUpdate() {
-    var work = workRef.current ? workRef.current.value : cur.important_work;
-    var process = processRef.current ? processRef.current.value : cur.completion_process;
-    var parts = partsRef.current ? partsRef.current.value : cur.spare_parts;
+    var work = getDivText(workDivRef);
+    var process = getDivText(processDivRef);
+    var parts = document.getElementById("spare_parts_area") ? document.getElementById("spare_parts_area").value : cur.spare_parts;
     if (!work.trim()) { showToast("Enter the important work", "warning"); return; }
     if (!process.trim()) { showToast("Enter completion process", "warning"); return; }
     if (editIdx !== null) {
@@ -118,9 +105,10 @@ function Editor() {
       showToast("Entry added", "success");
     }
     setCur({ important_work: "", completion_process: "", is_completed: "In Progress", spare_parts: "" });
-    if (workRef.current) workRef.current.value = "";
-    if (processRef.current) processRef.current.value = "";
-    if (partsRef.current) partsRef.current.value = "";
+    if (workDivRef.current) workDivRef.current.innerText = "";
+    if (processDivRef.current) processDivRef.current.innerText = "";
+    var sp = document.getElementById("spare_parts_area");
+    if (sp) sp.value = "";
   }
 
   function editEntry(i) {
@@ -128,9 +116,10 @@ function Editor() {
     setCur({ important_work: e.important_work, completion_process: e.completion_process, is_completed: e.is_completed, spare_parts: e.spare_parts });
     setEditIdx(i);
     setTimeout(function() {
-      if (workRef.current) workRef.current.value = e.important_work;
-      if (processRef.current) processRef.current.value = e.completion_process;
-      if (partsRef.current) partsRef.current.value = e.spare_parts;
+      if (workDivRef.current) workDivRef.current.innerText = e.important_work;
+      if (processDivRef.current) processDivRef.current.innerText = e.completion_process;
+      var sp = document.getElementById("spare_parts_area");
+      if (sp) sp.value = e.spare_parts;
     }, 50);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -171,15 +160,7 @@ function Editor() {
     await save("completed");
     setExporting(true);
     try {
-      var plainEntries = entries.map(function(e) {
-        return {
-          important_work: stripHtml(e.important_work),
-          completion_process: stripHtml(e.completion_process),
-          is_completed: e.is_completed,
-          spare_parts: e.spare_parts || "None"
-        };
-      });
-      await downloadReportPDF({ name: reportName, dateFrom: dateFrom, dateTo: dateTo, entries: plainEntries, logoBase64: logoBase64 }, "Weekly_Summary_" + reportName.replace(/\s+/g, "_") + "_" + dateFrom + ".pdf");
+      await downloadReportPDF({ name: reportName, dateFrom: dateFrom, dateTo: dateTo, entries: entries, logoBase64: logoBase64 }, "Weekly_Summary_" + reportName.replace(/\s+/g, "_") + "_" + dateFrom + ".pdf");
       showToast("PDF downloaded!", "success");
     } catch (err) { showToast("PDF failed: " + (err.message || "Unknown error"), "error"); }
     finally { setExporting(false); }
@@ -189,8 +170,28 @@ function Editor() {
 
   if (!profile || loading) return <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}><div className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }} /></div>;
 
-  var tb = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: "36px", height: "34px", borderRadius: "6px", border: "1.5px solid var(--border)", background: "white", cursor: "pointer", fontSize: "15px", fontWeight: "700", color: "var(--fg)", transition: "all 0.15s" };
-  var dv = { width: "1px", background: "var(--border)", margin: "0 6px", height: "20px", alignSelf: "center" };
+  var tb = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: "34px", height: "32px", borderRadius: "6px", border: "1.5px solid var(--border)", background: "white", cursor: "pointer", fontSize: "14px", fontWeight: "700", color: "var(--fg)", transition: "all 0.15s", flexShrink: 0 };
+  var tbHover = ":hover { border-color: var(--accent); color: var(--accent); background: #FFFBEB; }";
+  var dv = { width: "1px", background: "var(--border)", margin: "0 5px", height: "20px", alignSelf: "center", flexShrink: 0 };
+
+  function FormatBar(props) {
+    return (
+      <div style={{ display: "flex", gap: "4px", marginBottom: "6px", alignItems: "center", flexWrap: "wrap" }}>
+        <button type="button" onClick={function(){ document.execCommand("bold"); }} className={tb + tbHover} title="Bold (select text in the box, then click Bold"><b>B</b></button>
+        <button type="button" onClick={function(){ document.execCommand("italic"); }} className={tb + tbHover} title="Italic (select text, then click Italic"><i style={{ fontFamily: "Georgia, serif" }}>I</i></button>
+        <button type="button" onClick={function(){ document.execCommand("underline"); }} className={tb + tbHover} title="Underline (select text, then click Underline"><u>U</u></button>
+        {props.showEnhance ? (
+          <>
+            <div style={dv} />
+            <button type="button" onClick={function(){ doEnhance(props.field); }} disabled={paraphrasing === props.field}
+              style={{ ...tb, ...(paraphrasing === props.field ? { borderColor: "var(--accent)", background: "#FFFBEB", cursor: "wait" } : {} )} >
+              {paraphrasing ? <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} /> : <span style={{ fontSize: "16px" }}>&#10024;</span>}
+            </button>
+          </>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
@@ -235,45 +236,24 @@ function Editor() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1.5 text-gray-700">Important Work</label>
-                  <div style={{ display: "flex", gap: "4px", marginBottom: "6px", alignItems: "center" }}>
-                    <button type="button" onClick={function(){ applyFormat("bold"); }} style={tb} title="Select text in textarea, then click Bold"><b>B</b></button>
-                    <button type="button" onClick={function(){ applyFormat("italic"); }} style={tb} title="Select text, then click Italic"><i style={{ fontFamily: "Georgia, serif" }}>I</i></button>
-                    <button type="button" onClick={function(){ applyFormat("underline"); }} style={tb} title="Select text, then click Underline"><u>U</u></button>
-                    <div style={dv} />
-                    <button type="button" onClick={function(){ doEnhance("important_work"); }} disabled={paraphrasing === "important_work"}
-                      style={paraphrasing === "important_work" ? { ...tb, borderColor: "var(--accent)", background: "#FFFBEB" } : tb}
-                      title="Enhance with AI technical writing">
-                      {paraphrasing === "important_work" ? <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} /> : <span style={{ fontSize: "16px" }}>&#10024;</span>}
-                    </button>
-                  </div>
-                  <textarea ref={workRef} defaultValue={cur.important_work} placeholder={"e.g. Installation of Two New 75 Inches Huawei Television at CCR for CCTV Display"} rows={2} className="input" style={{ resize: "vertical", minHeight: 60 }} />
+                  <FormatBar showEnhance={true} field="important_work" paraphrasing={paraphrasing} onEnhance={function(){ doEnhance("important_work"); }} />
+                  <div ref={workDivRef} contentEditable className="input" style={{ minHeight: 80, resize: "vertical", lineHeight: "1.6", overflowY: "auto", maxHeight: "500px", whiteSpace: "pre-wrap", wordBreak: "break-word" }} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5 text-gray-700">Completion, Process And Results</label>
-                  <div style={{ display: "flex", gap: "4px", marginBottom: "6px", alignItems: "center" }}>
-                    <button type="button" onClick={function(){ applyFormat("bold"); }} style={tb}><b>B</b></button>
-                    <button type="button" onClick={function(){ applyFormat("italic"); }} style={tb}><i style={{ fontFamily: "Georgia, serif" }}>I</i></button>
-                    <button type="button" onClick={function(){ applyFormat("underline"); }} style={tb}><u>U</u></button>
-                    <div style={dv} />
-                    <button type="button" onClick={function(){ doEnhance("completion_process"); }} disabled={paraphrasing === "completion_process"}
-                      style={paraphrasing === "completion_process" ? { ...tb, borderColor: "var(--accent)", background: "#FFFBEB" } : tb}>
-                      {paraphrasing === "completion_process" ? <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} /> : <span style={{ fontSize: "16px" }}>&#10024;</span>}
-                    </button>
-                  </div>
-                  <textarea ref={processRef} defaultValue={cur.completion_process} placeholder={"1. Set laser level...\n2. Projected laser...\nResults: Two new TVs mounted level..."} rows={5} className="input" style={{ resize: "vertical", minHeight: 100 }} />
+                  <FormatBar showEnhance={true} field="completion_process" paraphrasing={paraphrasing} onEnhance={function(){ doEnhance("completion_process"); }} />
+                  <div ref={processDivRef} contentEditable className="input" style={{ minHeight: 140, resize: "vertical", lineHeight: "1.6", overflowY: "auto", maxHeight: "500px", whiteSpace: "pre-wrap", wordBreak: "break-word" }} />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700">Is it Completed?</label>
                     <select value={cur.is_completed} onChange={function(e){ setC("is_completed", e.target.value); }} className="input">
-                      <option value="Yes">Yes</option>
-                      <option value="No">No</option>
-                      <option value="In Progress">In Progress</option>
+                      <option value="Yes">Yes</option><option value="No">No</option><option value="In Progress">In Progress</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700">Spare Parts Model Numbers</label>
-                    <textarea ref={partsRef} defaultValue={cur.spare_parts} placeholder={"1. Bracket Model: DS-1602ZJ\n2. Power adapter: 57A241500\n(or None)"} rows={3} className="input" style={{ resize: "vertical", minHeight: 60 }} />
+                    <textarea id="spare_parts_area" className="input" placeholder={"1. Bracket Model: DS-1602ZJ\n2. Power adapter: 57A241500\n(or None)"} rows={3} style={{ resize: "vertical", minHeight: 60 }} />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 pt-2">
@@ -326,18 +306,35 @@ function Editor() {
               </div>
             </div>
             <div className="rounded-xl p-5" style={{ background: "linear-gradient(135deg, #0C2340 0%, #1A3A5C 100%)", border: "1px solid rgba(232,146,11,0.2)" }}>
-              <h3 className="font-display font-semibold text-sm text-white mb-3">How It Works</h3>
+              <h3 className="font-display font-semibold text-sm text-white mb-3">How to Use</h3>
               <div className="space-y-2 text-xs text-gray-400 leading-relaxed">
-                <p><span style={{ color: "var(--accent)" }}>Bold / Italic / Underline:</span> Select text in the textarea, click the button. Uses Markdown (**bold**, (_italic_), (__underline__)</p>
-                <p><span style={{ color: "var(--accent)" }}>Enhance:</span> Rewrites numbered steps with technical precision</p>
-                <p><span style={{ color: "var(--accent)" }}>Tip:</span> Format: "1. Inspected cameras at Yard A. 2. Replaced power supply. 3. Results: All cameras restored."</p>
-                <p><span style={{ color: "var(--accent)" }}>PDF Export:</span> Converts **bold** to actual bold in the downloaded PDF</p>
-                <p><span style={{ color: "var(--accent)" }}>Not enhanced:</span> If no improvements found, original text is kept untouched</p>
+                <p><span style={{ color: "var(--accent)" }}>Bold/Italic/Underline:</span> Select text in the box, then click the button. Works with keyboard shortcuts too (Ctrl+B, Ctrl+I, Ctrl+U).</p>
+                <p><span style={{ color: "var(--accent)" }}>Enhance:</span> Click Enhance to rewrite with AI technical writing.</p>
+                <p><span style={{ color: "var(--accent)" }}>Best results:</span> Write numbered steps: 1. Inspected... 2. Replaced... 3. Results: ...</p>
               </div>
             </div>
           </div>
         </div>
       </main>
+    </div>
+  );
+}
+
+function FormatBar(props) {
+  return (
+    <div style={{ display: "flex", gap: "4px", marginBottom: "6px", alignItems: "center", flexWrap: "wrap" }}>
+      <button type="button" onClick={function(){ document.execCommand("bold"); }} className={tb + " " + tbHover} title="Bold (or Ctrl+B)"><b>B</b></button>
+      <button type="button" onClick={function(){ document.execCommand("italic"); }} className={tb + " " + tbHover} title="Italic (or Ctrl+I)"><i style={{ fontFamily: "Georgia, serif" }}>I</i></button>
+      <button type="button" onClick={function(){ document.execCommand("underline"); }} className={tb + " " + tbHover} title="Underline (or Ctrl+U)"><u>U</u></button>
+      {props.showEnhance ? (
+        <>
+          <div style={dv} />
+          <button type="button" onClick={function(){ props.onEnhance(); }} disabled={props.paraphrasing}
+            style={props.paraphrasing ? { ...tb, borderColor: "var(--accent)", background: "#FFFBEB", cursor: "wait" } : { ...tb }}>
+            {props.paraphrasing ? <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} /> : <span style={{ fontSize: "16px" }}>&#10024;</span>}
+          </button>
+        </>
+      ) : null}
     </div>
   );
 }
