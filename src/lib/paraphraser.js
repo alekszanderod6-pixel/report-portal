@@ -12,7 +12,7 @@ var SMART_RULES = [
   { find: /^(\d+)\.\s*(?:Troubleshoot?|Diagnos?|Investigated?)\s+(.+)/im,
     rewrite: function(m) { return m[1] + ". Performed troubleshooting and fault diagnosis on " + m[2].replace(/\.\s*$/, "").toLowerCase() + " to identify root cause and implement corrective action."; }},
   { find: /^(\d+)\.\s*(?:Configured?|Set\s+up?|Programmed?)\s+(.+)/im,
-    rewrite: function(m) { return m[1] + ". Configured " + m[2].replace(/\.\s*$/, "").toLowerCase() + " with the required parameters and communication settings."; }},
+    rewrite: function(m) { return m[1] ". Configured " + m[2].replace(/\.\s*$/, "").toLowerCase() + " with the required parameters and communication settings."; }},
   { find: /^(\d+)\.\s*(?:Removed?|Dismantled?|Disconnected?|Isolated?)\s+(.+)/im,
     rewrite: function(m) { return m[1] + ". Safely removed " + m[2].replace(/\.\s*$/, "").toLowerCase() + " following proper isolation and safety procedures."; }},
   { find: /^(\d+)\.\s*(?:Restored?|Recovered?|Returned?)\s+(.+)/im,
@@ -34,7 +34,13 @@ var SMART_RULES = [
   { find: /^(\d+)\.\s*(?:Logged?|Recorded?|Documented?|Noted?)\s+(.+)/im,
     rewrite: function(m) { return m[1] + ". Recorded and documented all parameters of " + m[2].replace(/\.\s*$/, "").toLowerCase() + " for reference and future analysis."; }},
   { find: /^(\d+)\.\s*(?:Identified?|Noticed?|Discovered?|Found?)\s+(.+)/im,
-    rewrite: function(m) { return m[1] + ". Identified " + m[2].replace(/\.\s*$/, "").toLowerCase() + " during routine inspection and documented the finding for further action."; }}
+    rewrite: function(m) { return m[1] + ". Identified " + m[2].replace(/\.\s*$/, "").toLowerCase() + " during routine inspection and documented the finding for further action."; }},
+  { find: /^(\d+)\.\s*(?:Assigned?|Allocated?|Appointed?|Deployed?)\s+(.+)/im,
+    rewrite: function(m) { return m[1] + ". Was assigned to " + m[2].replace(/\.\s*$/, "").toLowerCase() + " for execution and follow-up."; }},
+  { find: /^(\d+)\.\s*(?:Retrofitted?|Upgraded?|Modernized?|Converted?)\s+(.+)/im,
+    rewrite: function(m) { return m[1] + ". Performed retrofit and upgrade of " + m[2].replace(/\.\s*$/, "").toLowerCase() + " to meet current operational standards."; }},
+  { find: /^(\d+)\.\s*(?:Repaired?|Fixed?|Rectified?|Mended?)\s+(.+)/im,
+    rewrite: function(m) { return m[1] + ". Performed repair on " + m[2].replace(/\.\s*$/, "").toLowerCase() + " to restore functionality to acceptable standards."; }}
 ];
 
 var IMPROVEMENTS = {
@@ -71,7 +77,9 @@ function improveSentence(text) {
     if (SMART_RULES[i].find.test(text)) return SMART_RULES[i].rewrite(text);
   }
   for (var key in IMPROVEMENTS) {
-    if (text.toLowerCase().indexOf(key) !== -1) return IMPROVEMENTS[key];
+    if (text.toLowerCase().indexOf(key) !== -1) {
+      return text.replace(key, IMPROVEMENTS[key]);
+    }
   }
   return null;
 }
@@ -85,9 +93,7 @@ function enhanceLine(text) {
   if (/^(None|N\/A|NA|nil)$/i.test(t)) return t;
   if (/\d+\.\s*(DS-|WL-|POE|MY\d|CHNT|HD\d|CFM-)/i.test(t)) return t;
   if (/^\d+\.\s+(?:\*|-|\u2022|\u25CF)/.test(t)) return t;
-  var result = improveSentence(t);
-  if (result) return result;
-  return t;
+  return improveSentence(t);
 }
 
 export function paraphraseField(text) {
