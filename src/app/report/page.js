@@ -1,67 +1,86 @@
 "use client";
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase, getCurrentProfile } from "@/lib/supabase";
 import { downloadReportPDF } from "@/lib/pdfGenerator";
-import { paraphraseField } from "@/lib/paraphraser";
+import { paraphraseField, stripHtml } from "@/lib/paraphraser";
 import Navbar from "@/components/Navbar";
 import { showToast } from "@/components/Toast";
 
-// Insert text at the textarea cursor position, replacing any selection
+// ─── Rich text helpers ────────────────────────────────────────────────────────
+
+// execCommand for contenteditable (bold / italic / underline)
+function execFormat(cmd) {
+  document.execCommand(cmd, false, null);
+}
+
+// Get plain text from a contenteditable div
+function getPlain(ref) {
+  if (!ref?.current) return "";
+  return stripHtml(ref.current.innerHTML);
+}
+
+// Get HTML from contenteditable
+function getHtml(ref) {
+  if (!ref?.current) return "";
+  return ref.current.innerHTML;
+}
+
+// Set HTML into contenteditable and move cursor to end
+function setHtml(ref, html) {
+  if (!ref?.current) return;
+  ref.current.innerHTML = html;
+  // Move cursor to end
+  const el = ref.current;
+  el.focus();
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+// Insert text at cursor inside a contenteditable
 function insertAtCursor(ref, text) {
-  if (!ref || !ref.current) return;
-  const el = ref.current;
-  const start = el.selectionStart;
-  const end = el.selectionEnd;
-  const val = el.value;
-  el.value = val.substring(0, start) + text + val.substring(end);
-  const pos = start + text.length;
-  el.selectionStart = pos;
-  el.selectionEnd = pos;
-  el.focus();
-  // Trigger React synthetic onChange so state stays in sync
-  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-  nativeInputValueSetter.call(el, el.value);
-  el.dispatchEvent(new Event("input", { bubbles: true }));
+  if (!ref?.current) return;
+  ref.current.focus();
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  range.deleteContents();
+  // Convert \n to <br>
+  const parts = text.split("\n");
+  const frag = document.createDocumentFragment();
+  parts.forEach((part, i) => {
+    if (i > 0) frag.appendChild(document.createElement("br"));
+    if (part) frag.appendChild(document.createTextNode(part));
+  });
+  range.insertNode(frag);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
 }
 
-// Wrap selected text with a marker (bold/italic/underline). If nothing selected, wrap placeholder.
-function wrapSelection(ref, before, after) {
-  if (!ref || !ref.current) return;
-  const el = ref.current;
-  const start = el.selectionStart;
-  const end = el.selectionEnd;
-  const val = el.value;
-  const selected = val.substring(start, end);
-  const replacement = before + (selected || "text") + after;
-  el.value = val.substring(0, start) + replacement + val.substring(end);
-  // Re-select the inner text (excluding markers)
-  el.selectionStart = start + before.length;
-  el.selectionEnd = start + before.length + (selected || "text").length;
-  el.focus();
-  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-  nativeInputValueSetter.call(el, el.value);
-  el.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-// Count step numbers already in text so next insert auto-increments
+// Count step numbers in a contenteditable for auto-increment
 function nextStepNum(ref) {
-  if (!ref || !ref.current) return 1;
-  const val = ref.current.value;
-  const matches = val.match(/^\d+\./gm);
+  if (!ref?.current) return 1;
+  const text = ref.current.innerText || "";
+  const matches = text.match(/^\d+\./gm);
   return matches ? matches.length + 1 : 1;
 }
 
+// ─── Editor component ─────────────────────────────────────────────────────────
 function Editor() {
   const sp = useSearchParams();
   const editId = sp.get("id");
   const fileRef = useRef(null);
   const workRef = useRef(null);
   const procRef = useRef(null);
-  const partsRef = useRef(null);
+  const partsRef = useRef(null); // still a textarea
 
   const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(!!editId);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [paraphrasing, setParaphrasing] = useState(null);
@@ -72,31 +91,39 @@ function Editor() {
   const [reportId, setReportId] = useState(null);
   const [reportStatus, setReportStatus] = useState("draft");
   const [entries, setEntries] = useState([]);
-  const [cur, setCur] = useState({ important_work: "", completion_process: "", is_completed: "In Progress", spare_parts: "" });
+  const [isCompleted, setIsCompleted] = useState("In Progress");
   const [editIdx, setEditIdx] = useState(null);
 
   useEffect(() => { init(); }, []);
 
   async function init() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { window.location.href = "/"; return; }
-    const p = await getCurrentProfile();
-    setProfile(p);
-    if (editId) {
-      const { data: r } = await supabase.from("reports").select("*").eq("id", editId).eq("user_id", user.id).single();
-      if (!r) { showToast("Report not found", "error"); window.location.href = "/dashboard"; return; }
-      setReportId(r.id); setReportName(r.name); setDateFrom(r.date_from); setDateTo(r.date_to); setReportStatus(r.status);
-      const { data: e } = await supabase.from("report_entries").select("*").eq("report_id", r.id).order("serial_number");
-      setEntries(e || []);
-      try { const sl = localStorage.getItem("logo_" + r.id); if (sl) setLogoBase64(sl); } catch (_) {}
-      setLoading(false);
-    } else {
-      const td = new Date(), dw = td.getDay();
-      const mn = new Date(td); mn.setDate(td.getDate() - (dw === 0 ? 6 : dw - 1));
-      const sn = new Date(mn); sn.setDate(mn.getDate() + 6);
-      setDateFrom(mn.toISOString().split("T")[0]);
-      setDateTo(sn.toISOString().split("T")[0]);
-      setReportName(p?.name || "");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { window.location.href = "/"; return; }
+      const p = await getCurrentProfile();
+      setProfile(p);
+      if (editId) {
+        const { data: r } = await supabase.from("reports").select("*").eq("id", editId).eq("user_id", user.id).single();
+        if (!r) { showToast("Report not found", "error"); window.location.href = "/dashboard"; return; }
+        setReportId(r.id); setReportName(r.name); setDateFrom(r.date_from); setDateTo(r.date_to); setReportStatus(r.status);
+        const { data: e } = await supabase.from("report_entries").select("*").eq("report_id", r.id).order("serial_number");
+        setEntries(e || []);
+        try { const sl = localStorage.getItem("logo_" + r.id); if (sl) setLogoBase64(sl); } catch (_) {}
+        // Populate contenteditable fields after mount
+        if (e && e.length === 0) {
+          // new editing of empty — handled by editEntry
+        }
+      } else {
+        const td = new Date(), dw = td.getDay();
+        const mn = new Date(td); mn.setDate(td.getDate() - (dw === 0 ? 6 : dw - 1));
+        const sn = new Date(mn); sn.setDate(mn.getDate() + 6);
+        setDateFrom(mn.toISOString().split("T")[0]);
+        setDateTo(sn.toISOString().split("T")[0]);
+        setReportName(p?.name || "");
+      }
+    } catch (err) {
+      showToast("Load error: " + err.message, "error");
+    } finally {
       setLoading(false);
     }
   }
@@ -120,54 +147,70 @@ function Editor() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  // Enhance: read textarea value → paraphrase → write back. Never clears.
+  // ─── Enhance: reads contenteditable plain text, enhances, writes back as HTML
   function doEnhance(field) {
-    const refMap = { important_work: workRef, completion_process: procRef };
-    const ref = refMap[field];
+    const ref = field === "important_work" ? workRef : procRef;
     if (!ref?.current) { showToast("Could not read field", "error"); return; }
-    const plain = ref.current.value;
+    const plain = getPlain(ref);
     if (!plain.trim()) { showToast("Type something first", "warning"); return; }
     setParaphrasing(field);
     setTimeout(() => {
-      const enhanced = paraphraseField(plain);
-      ref.current.value = enhanced || plain;
-      setCur(p => ({ ...p, [field]: enhanced || plain }));
-      setParaphrasing(null);
-      showToast("Enhanced!", "success");
-    }, 150);
+      try {
+        const enhanced = paraphraseField(plain);
+        if (!enhanced || enhanced.trim() === plain.trim()) {
+          setParaphrasing(null);
+          showToast("Text looks good already!", "info");
+          return;
+        }
+        // Convert newlines back to <br> for contenteditable
+        const html = enhanced.replace(/\n/g, "<br>");
+        ref.current.innerHTML = html;
+        showToast("Enhanced successfully!", "success");
+      } catch (err) {
+        showToast("Enhance failed", "error");
+      } finally {
+        setParaphrasing(null);
+      }
+    }, 100);
+  }
+
+  function clearFields() {
+    if (workRef.current) workRef.current.innerHTML = "";
+    if (procRef.current) procRef.current.innerHTML = "";
+    if (partsRef.current) partsRef.current.value = "";
+    setIsCompleted("In Progress");
+    setEditIdx(null);
   }
 
   function addOrUpdate() {
-    const work = workRef.current?.value || "";
-    const process = procRef.current?.value || "";
+    const work = getHtml(workRef);
+    const workPlain = getPlain(workRef);
+    const process = getHtml(procRef);
+    const processPlain = getPlain(procRef);
     const parts = partsRef.current?.value || "";
-    if (!work.trim()) { showToast("Enter the important work", "warning"); return; }
-    if (!process.trim()) { showToast("Enter completion process", "warning"); return; }
+    if (!workPlain.trim()) { showToast("Enter the important work", "warning"); return; }
+    if (!processPlain.trim()) { showToast("Enter completion process", "warning"); return; }
     if (editIdx !== null) {
       setEntries(p => p.map((e, i) => i === editIdx
-        ? { ...e, important_work: work, completion_process: process, is_completed: cur.is_completed, spare_parts: parts }
+        ? { ...e, important_work: work, completion_process: process, is_completed: isCompleted, spare_parts: parts }
         : e));
-      setEditIdx(null);
       showToast("Entry updated", "success");
     } else {
-      setEntries(p => [...p, { id: null, serial_number: p.length + 1, important_work: work, completion_process: process, is_completed: cur.is_completed, spare_parts: parts }]);
+      setEntries(p => [...p, { id: null, serial_number: p.length + 1, important_work: work, completion_process: process, is_completed: isCompleted, spare_parts: parts }]);
       showToast("Entry added", "success");
     }
-    setCur({ important_work: "", completion_process: "", is_completed: "In Progress", spare_parts: "" });
-    if (workRef.current) workRef.current.value = "";
-    if (procRef.current) procRef.current.value = "";
-    if (partsRef.current) partsRef.current.value = "";
+    clearFields();
   }
 
   function editEntry(i) {
     const e = entries[i];
-    setCur({ important_work: e.important_work, completion_process: e.completion_process, is_completed: e.is_completed, spare_parts: e.spare_parts });
+    setIsCompleted(e.is_completed);
     setEditIdx(i);
     setTimeout(() => {
-      if (workRef.current) workRef.current.value = e.important_work;
-      if (procRef.current) procRef.current.value = e.completion_process;
+      if (workRef.current) workRef.current.innerHTML = e.important_work || "";
+      if (procRef.current) procRef.current.innerHTML = e.completion_process || "";
       if (partsRef.current) partsRef.current.value = e.spare_parts || "";
-    }, 50);
+    }, 30);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -215,88 +258,94 @@ function Editor() {
 
   const fmtD = (d) => d ? new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
 
-  if (!profile || loading) return (
+  if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}>
       <div className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }} />
     </div>
   );
 
-  const divider = <div style={{ width: 1, background: "var(--border)", height: 18, margin: "0 2px" }} />;
+  if (!profile) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}>
+      <div className="text-center">
+        <p className="text-gray-500 mb-3">Session expired.</p>
+        <button onClick={() => window.location.href = "/"} className="btn btn-primary">Back to Login</button>
+      </div>
+    </div>
+  );
 
-  // Toolbar for a textarea field — Bold/I/U wrap selection; other buttons insert at cursor
+  // ─── Toolbar component ────────────────────────────────────────────────────
+  const dv = <div style={{ width:1, background:"var(--border)", height:18, margin:"0 2px" }} />;
+
+  const tbBtn = (label, title, onClick, extraStyle = {}) => (
+    <button type="button" title={title}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+      style={{
+        display:"inline-flex", alignItems:"center", justifyContent:"center",
+        padding:"0 9px", height:28, borderRadius:5,
+        border:"1px solid var(--border)", background:"white", cursor:"pointer",
+        fontSize:12, fontWeight:600, color:"var(--fg)", whiteSpace:"nowrap",
+        transition:"background 0.1s",
+        ...extraStyle
+      }}>
+      {label}
+    </button>
+  );
+
   function Toolbar({ fieldRef, field }) {
     return (
-      <div style={{ display: "flex", gap: "2px", marginBottom: 6, alignItems: "center", flexWrap: "wrap" }}>
-        {/* Formatting */}
-        <button type="button" title="Bold selected text"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => wrapSelection(fieldRef, "**", "**")}
-          style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 8px",height:30,borderRadius:5,border:"1px solid var(--border)",background:"white",cursor:"pointer",fontSize:13,fontWeight:"900",color:"var(--fg)",fontFamily:"serif" }}>
-          B
-        </button>
-        <button type="button" title="Italic selected text"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => wrapSelection(fieldRef, "*", "*")}
-          style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 8px",height:30,borderRadius:5,border:"1px solid var(--border)",background:"white",cursor:"pointer",fontSize:13,fontStyle:"italic",fontWeight:"600",color:"var(--fg)",fontFamily:"serif" }}>
-          I
-        </button>
-        <button type="button" title="Underline selected text"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => wrapSelection(fieldRef, "__", "__")}
-          style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 8px",height:30,borderRadius:5,border:"1px solid var(--border)",background:"white",cursor:"pointer",fontSize:13,fontWeight:"600",color:"var(--fg)",textDecoration:"underline",fontFamily:"serif" }}>
-          U
-        </button>
-        {divider}
-        {/* Insert helpers */}
-        <button type="button" title="Insert numbered step"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => insertAtCursor(fieldRef, nextStepNum(fieldRef) + ". ")}
-          style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 8px",height:30,borderRadius:5,border:"1px solid var(--border)",background:"white",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--fg)",whiteSpace:"nowrap" }}>
-          + Step #
-        </button>
-        <button type="button" title="Insert bullet point"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => insertAtCursor(fieldRef, "• ")}
-          style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 8px",height:30,borderRadius:5,border:"1px solid var(--border)",background:"white",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--fg)",whiteSpace:"nowrap" }}>
-          • Bullet
-        </button>
-        <button type="button" title='Insert "Results:" label'
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => insertAtCursor(fieldRef, "Results: ")}
-          style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 8px",height:30,borderRadius:5,border:"1px solid var(--border)",background:"white",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--fg)",whiteSpace:"nowrap" }}>
-          Results:
-        </button>
-        <button type="button" title="Insert new line"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => insertAtCursor(fieldRef, "\n")}
-          style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 8px",height:30,borderRadius:5,border:"1px solid var(--border)",background:"white",cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--fg)",whiteSpace:"nowrap" }}>
-          ↵ Line
-        </button>
-        {divider}
-        {/* Enhance */}
+      <div style={{ display:"flex", gap:3, marginBottom:6, alignItems:"center", flexWrap:"wrap" }}>
+        {/* Bold */}
+        {tbBtn(<b style={{fontFamily:"serif",fontSize:14}}>B</b>, "Bold (select text first)", () => { fieldRef.current?.focus(); execFormat("bold"); })}
+        {/* Italic */}
+        {tbBtn(<i style={{fontFamily:"serif",fontSize:14}}>I</i>, "Italic (select text first)", () => { fieldRef.current?.focus(); execFormat("italic"); })}
+        {/* Underline */}
+        {tbBtn(<u style={{fontFamily:"serif",fontSize:14}}>U</u>, "Underline (select text first)", () => { fieldRef.current?.focus(); execFormat("underline"); })}
+        {dv}
+        {tbBtn("+ Step #", "Insert numbered step", () => insertAtCursor(fieldRef, nextStepNum(fieldRef) + ". "))}
+        {tbBtn("• Bullet", "Insert bullet point", () => insertAtCursor(fieldRef, "• "))}
+        {tbBtn("Results:", 'Insert "Results:" label', () => insertAtCursor(fieldRef, "Results: "))}
+        {tbBtn("↵ Line", "Insert new line", () => insertAtCursor(fieldRef, "\n"))}
+        {dv}
         <button type="button" title="Enhance with technical writing"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => doEnhance(field)}
           disabled={paraphrasing === field}
-          style={{ display:"inline-flex",alignItems:"center",gap:4,padding:"0 10px",height:30,borderRadius:5,border:"1px solid var(--border)",background: paraphrasing === field ? "#FFFBEB" : "white",cursor: paraphrasing === field ? "not-allowed" : "pointer",fontSize:12,fontWeight:600,color: paraphrasing === field ? "var(--accent)" : "var(--fg)",whiteSpace:"nowrap",transition:"all 0.15s" }}>
+          style={{
+            display:"inline-flex", alignItems:"center", gap:4, padding:"0 10px", height:28,
+            borderRadius:5, border:"1px solid var(--border)",
+            background: paraphrasing === field ? "#FFFBEB" : "white",
+            cursor: paraphrasing === field ? "not-allowed" : "pointer",
+            fontSize:12, fontWeight:600,
+            color: paraphrasing === field ? "var(--accent)" : "var(--fg)",
+            whiteSpace:"nowrap", transition:"all 0.15s"
+          }}>
           {paraphrasing === field
-            ? <span className="spinner" style={{ width:12, height:12, borderWidth:2 }} />
-            : <span style={{ fontSize:14 }}>✨</span>}
+            ? <span className="spinner" style={{ width:11, height:11, borderWidth:2 }} />
+            : <span>✨</span>}
           Enhance
         </button>
       </div>
     );
   }
 
+  // Shared contenteditable style
+  const ceStyle = {
+    width:"100%", minHeight:72, padding:"0.6rem 0.8rem",
+    border:"1.5px solid var(--border)", borderRadius:"0.5rem",
+    fontFamily:"DM Sans, sans-serif", fontSize:"0.875rem",
+    background:"white", color:"var(--fg)", lineHeight:1.6,
+    overflowY:"auto", wordBreak:"break-word", outline:"none",
+  };
+
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
 
-        {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="font-display font-bold text-2xl" style={{ color: "var(--navy)" }}>
+            <h1 className="font-display font-bold text-2xl" style={{ color:"var(--navy)" }}>
               {editId ? "Edit Report" : "New Weekly Report"}
             </h1>
             <p className="text-gray-500 text-sm mt-1">
@@ -318,9 +367,9 @@ function Editor() {
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
 
-            {/* Report info card */}
-            <div className="bg-white rounded-xl p-6" style={{ border: "1px solid var(--border)" }}>
-              <h2 className="font-display font-semibold text-lg mb-4" style={{ color: "var(--navy)" }}>Report Information</h2>
+            {/* Report info */}
+            <div className="bg-white rounded-xl p-6" style={{ border:"1px solid var(--border)" }}>
+              <h2 className="font-display font-semibold text-lg mb-4" style={{ color:"var(--navy)" }}>Report Information</h2>
               <div className="grid sm:grid-cols-3 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium mb-1.5 text-gray-700">Name</label>
@@ -335,13 +384,11 @@ function Editor() {
                   <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="input" />
                 </div>
               </div>
-              {/* Logo upload */}
-              <div className="flex items-center gap-4 p-4 rounded-lg" style={{ background: "#F8FAFC", border: "1px dashed var(--border)" }}>
+              <div className="flex items-center gap-4 p-4 rounded-lg" style={{ background:"#F8FAFC", border:"1px dashed var(--border)" }}>
                 <div>
                   {logoBase64
-                    ? <img src={logoBase64} alt="Logo" className="w-14 h-14 rounded-lg object-contain" style={{ border: "1px solid var(--border)" }} />
-                    : <div className="w-14 h-14 rounded-lg flex items-center justify-center" style={{ background: "var(--accent)" }}><span className="text-white font-bold text-xs">LOGO</span></div>
-                  }
+                    ? <img src={logoBase64} alt="Logo" className="w-14 h-14 rounded-lg object-contain" style={{ border:"1px solid var(--border)" }} />
+                    : <div className="w-14 h-14 rounded-lg flex items-center justify-center" style={{ background:"var(--accent)" }}><span className="text-white font-bold text-xs">LOGO</span></div>}
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-700">Company Logo</p>
@@ -350,36 +397,51 @@ function Editor() {
                 <div className="flex items-center gap-2">
                   <input type="file" ref={fileRef} accept="image/*" onChange={handleLogo} className="hidden" />
                   <button onClick={() => fileRef.current?.click()} className="btn btn-outline btn-sm">Upload</button>
-                  {logoBase64 && <button onClick={removeLogo} className="btn btn-sm" style={{ background: "transparent", color: "var(--danger)" }}>Remove</button>}
+                  {logoBase64 && <button onClick={removeLogo} className="btn btn-sm" style={{ background:"transparent", color:"var(--danger)" }}>Remove</button>}
                 </div>
               </div>
             </div>
 
-            {/* Entry form card */}
-            <div className="bg-white rounded-xl p-6" style={{ border: "1px solid var(--border)" }}>
-              <h2 className="font-display font-semibold text-lg mb-1" style={{ color: "var(--navy)" }}>
+            {/* Entry form */}
+            <div className="bg-white rounded-xl p-6" style={{ border:"1px solid var(--border)" }}>
+              <h2 className="font-display font-semibold text-lg mb-1" style={{ color:"var(--navy)" }}>
                 {editIdx !== null ? "Edit Entry #" + (editIdx + 1) : "Add Work Entry"}
               </h2>
               <p className="text-gray-400 text-xs mb-4">Serial Number: {editIdx !== null ? editIdx + 1 : entries.length + 1}</p>
               <div className="space-y-4">
+
                 <div>
                   <label className="block text-sm font-medium mb-1.5 text-gray-700">Important Work</label>
                   <Toolbar fieldRef={workRef} field="important_work" />
-                  <textarea ref={workRef} defaultValue={cur.important_work}
-                    placeholder="e.g. Installation of Ruijie Wireless Access Point at Oil Area Gate"
-                    rows={2} className="input" style={{ resize: "vertical", minHeight: 60, fontFamily: "DM Sans, sans-serif" }} />
+                  <div
+                    ref={workRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    data-placeholder="e.g. Installation of Ruijie Wireless Access Point at Oil Area Gate to East"
+                    style={ceStyle}
+                    onFocus={(e) => e.currentTarget.style.borderColor = "var(--accent)"}
+                    onBlur={(e) => e.currentTarget.style.borderColor = "var(--border)"}
+                  />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium mb-1.5 text-gray-700">Completion, Process And Results</label>
                   <Toolbar fieldRef={procRef} field="completion_process" />
-                  <textarea ref={procRef} defaultValue={cur.completion_process}
-                    placeholder={"1. Installed new panel and ensured network wiring from AP to switch.\n2. Mounted camera for Oil Gate facing Plant car parks.\nResults: Installation completed successfully."}
-                    rows={5} className="input" style={{ resize: "vertical", minHeight: 100, fontFamily: "DM Sans, sans-serif" }} />
+                  <div
+                    ref={procRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    data-placeholder={"1. Installed new panel and ensured network wiring from AP to switch.\n2. Mounted camera for Oil Gate facing Plant car parks.\nResults: Installation completed successfully."}
+                    style={{ ...ceStyle, minHeight: 110 }}
+                    onFocus={(e) => e.currentTarget.style.borderColor = "var(--accent)"}
+                    onBlur={(e) => e.currentTarget.style.borderColor = "var(--border)"}
+                  />
                 </div>
+
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700">Is it Completed?</label>
-                    <select value={cur.is_completed} onChange={(e) => setCur(p => ({ ...p, is_completed: e.target.value }))} className="input">
+                    <select value={isCompleted} onChange={(e) => setIsCompleted(e.target.value)} className="input">
                       <option value="Yes">Yes</option>
                       <option value="No">No</option>
                       <option value="In Progress">In Progress</option>
@@ -387,11 +449,12 @@ function Editor() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700">Spare Parts Model Numbers</label>
-                    <textarea ref={partsRef} defaultValue={cur.spare_parts}
-                      placeholder={"1. MD: RG-AP680-O(P)\n2: Cam MD: DS-2DC42201W-D\n(or None)"}
-                      rows={3} className="input" style={{ resize: "vertical", minHeight: 60, fontFamily: "DM Sans, sans-serif" }} />
+                    <textarea ref={partsRef}
+                      placeholder={"1. MD: RG-AP680-O(P)\n2. Cam MD: DS-2DC42201W-D\n(or None)"}
+                      rows={3} className="input" style={{ resize:"vertical", minHeight:72, fontFamily:"DM Sans, sans-serif" }} />
                   </div>
                 </div>
+
                 <div className="flex items-center gap-2 pt-2">
                   <button onClick={addOrUpdate} className="btn btn-navy">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -400,18 +463,16 @@ function Editor() {
                     {editIdx !== null ? "Update Entry" : "Add Entry"}
                   </button>
                   {editIdx !== null && (
-                    <button onClick={() => { setEditIdx(null); setCur({ important_work: "", completion_process: "", is_completed: "In Progress", spare_parts: "" }); if (workRef.current) workRef.current.value = ""; if (procRef.current) procRef.current.value = ""; if (partsRef.current) partsRef.current.value = ""; }} className="btn btn-outline">
-                      Cancel Edit
-                    </button>
+                    <button onClick={clearFields} className="btn btn-outline">Cancel Edit</button>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Entries preview table */}
-            <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-              <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
-                <h2 className="font-display font-semibold text-lg" style={{ color: "var(--navy)" }}>Report Entries</h2>
+            {/* Entries table */}
+            <div className="bg-white rounded-xl overflow-hidden" style={{ border:"1px solid var(--border)" }}>
+              <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom:"1px solid var(--border)" }}>
+                <h2 className="font-display font-semibold text-lg" style={{ color:"var(--navy)" }}>Report Entries</h2>
                 <span className="text-sm text-gray-400">{entries.length} entr{entries.length !== 1 ? "ies" : "y"}</span>
               </div>
               {!entries.length ? (
@@ -421,20 +482,20 @@ function Editor() {
                   <table className="report-preview-table">
                     <thead>
                       <tr>
-                        <th style={{ width: 40 }}>S/N</th>
-                        <th style={{ width: "20%" }}>Important Work</th>
-                        <th style={{ width: "40%" }}>Completion, Process And Results</th>
-                        <th style={{ width: 80 }}>Status</th>
-                        <th style={{ width: "18%" }}>Spare Parts</th>
-                        <th style={{ width: 70 }}></th>
+                        <th style={{ width:40 }}>S/N</th>
+                        <th style={{ width:"22%" }}>Important Work</th>
+                        <th style={{ width:"40%" }}>Completion, Process And Results</th>
+                        <th style={{ width:80 }}>Status</th>
+                        <th style={{ width:"16%" }}>Spare Parts</th>
+                        <th style={{ width:70 }}></th>
                       </tr>
                     </thead>
                     <tbody>
                       {entries.map((e, i) => (
                         <tr key={i}>
-                          <td className="text-center font-semibold" style={{ color: "var(--navy)" }}>{i + 1}</td>
-                          <td><div style={{ display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical", overflow:"hidden", whiteSpace:"pre-line" }}>{e.important_work}</div></td>
-                          <td><div style={{ display:"-webkit-box", WebkitLineClamp:4, WebkitBoxOrient:"vertical", overflow:"hidden", whiteSpace:"pre-line" }}>{e.completion_process}</div></td>
+                          <td className="text-center font-semibold" style={{ color:"var(--navy)" }}>{i + 1}</td>
+                          <td><div style={{ display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical", overflow:"hidden" }} dangerouslySetInnerHTML={{ __html: e.important_work }} /></td>
+                          <td><div style={{ display:"-webkit-box", WebkitLineClamp:4, WebkitBoxOrient:"vertical", overflow:"hidden" }} dangerouslySetInnerHTML={{ __html: e.completion_process }} /></td>
                           <td className="text-center">
                             {e.is_completed === "Yes" ? <span className="badge badge-success">Yes</span>
                               : e.is_completed === "No" ? <span className="badge badge-danger">No</span>
@@ -462,8 +523,8 @@ function Editor() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <div className="bg-white rounded-xl p-5" style={{ border: "1px solid var(--border)" }}>
-              <h3 className="font-display font-semibold text-sm mb-3" style={{ color: "var(--navy)" }}>Report Summary</h3>
+            <div className="bg-white rounded-xl p-5" style={{ border:"1px solid var(--border)" }}>
+              <h3 className="font-display font-semibold text-sm mb-3" style={{ color:"var(--navy)" }}>Report Summary</h3>
               <div className="space-y-3 text-sm">
                 {[
                   ["Period", fmtD(dateFrom) + " – " + fmtD(dateTo)],
@@ -474,27 +535,27 @@ function Editor() {
                 ].map(([label, val], i) => (
                   <div key={i} className="flex justify-between">
                     <span className="text-gray-500">{label}</span>
-                    <span className="font-medium" style={i === 2 ? { color:"var(--success)" } : i === 3 ? { color:"var(--warning)" } : i === 4 ? { color:"var(--danger)" } : {}}>
+                    <span className="font-medium" style={i===2?{color:"var(--success)"}:i===3?{color:"var(--warning)"}:i===4?{color:"var(--danger)"}:{}}>
                       {val}
                     </span>
                   </div>
                 ))}
-                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "0.75rem" }} className="flex justify-between">
+                <div style={{ borderTop:"1px solid var(--border)", paddingTop:"0.75rem" }} className="flex justify-between">
                   <span className="text-gray-500">Status</span>
                   {reportStatus === "completed" ? <span className="badge badge-success">Completed</span> : <span className="badge badge-warning">Draft</span>}
                 </div>
               </div>
             </div>
 
-            <div className="rounded-xl p-5" style={{ background: "linear-gradient(135deg, #0C2340 0%, #1A3A5C 100%)", border: "1px solid rgba(232,146,11,0.2)" }}>
+            <div className="rounded-xl p-5" style={{ background:"linear-gradient(135deg,#0C2340 0%,#1A3A5C 100%)", border:"1px solid rgba(232,146,11,0.2)" }}>
               <h3 className="font-display font-semibold text-sm text-white mb-3">Toolbar Guide</h3>
               <div className="space-y-2 text-xs text-gray-400 leading-relaxed">
-                <p><span style={{ color:"var(--accent)" }}>B / I / U</span> — Select text first, then tap to Bold, Italic, or Underline it</p>
-                <p><span style={{ color:"var(--accent)" }}>+ Step #</span> — Inserts auto-incrementing step numbers (1. 2. 3.)</p>
+                <p><span style={{ color:"var(--accent)" }}>B / I / U</span> — Select text first, then tap to instantly Bold, Italic, or Underline it</p>
+                <p><span style={{ color:"var(--accent)" }}>+ Step #</span> — Inserts auto-numbered steps (1. 2. 3.)</p>
                 <p><span style={{ color:"var(--accent)" }}>• Bullet</span> — Inserts a bullet point</p>
-                <p><span style={{ color:"var(--accent)" }}>Results:</span> — Inserts the "Results:" label</p>
-                <p><span style={{ color:"var(--accent)" }}>✨ Enhance</span> — Rewrites your text with formal technical language</p>
-                <p style={{ color: "#7DD3FC" }}>Tip: write steps like "1. Installed... 2. Configured... Results:..." for best results</p>
+                <p><span style={{ color:"var(--accent)" }}>Results:</span> — Adds the Results label</p>
+                <p><span style={{ color:"var(--accent)" }}>✨ Enhance</span> — Fixes spelling, grammar and rewrites in professional technical language</p>
+                <p style={{ color:"#7DD3FC" }}>Tip: write naturally, then hit Enhance to make it professional</p>
               </div>
             </div>
           </div>
@@ -507,8 +568,8 @@ function Editor() {
 export default function ReportPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}>
-        <div className="spinner" style={{ width: 40, height: 40, borderWidth: 4 }} />
+      <div className="min-h-screen flex items-center justify-center" style={{ background:"var(--bg)" }}>
+        <div className="spinner" style={{ width:40, height:40, borderWidth:4 }} />
       </div>
     }>
       <Editor />
