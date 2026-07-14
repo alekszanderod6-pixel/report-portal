@@ -1,9 +1,9 @@
 "use client";
-import { useState, useEffect, useRef, Suspense, useCallback } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase, getCurrentProfile } from "@/lib/supabase";
 import { downloadReportPDF } from "@/lib/pdfGenerator";
-import { paraphraseField, stripHtml } from "@/lib/paraphraser";
+import { stripHtml } from "@/lib/paraphraser";
 import Navbar from "@/components/Navbar";
 import { showToast } from "@/components/Toast";
 
@@ -147,31 +147,35 @@ function Editor() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  // ─── Enhance: reads contenteditable plain text, enhances, writes back as HTML
-  function doEnhance(field) {
+  // ─── Enhance: calls Groq AI API to rewrite text professionally
+  async function doEnhance(field) {
     const ref = field === "important_work" ? workRef : procRef;
     if (!ref?.current) { showToast("Could not read field", "error"); return; }
     const plain = getPlain(ref);
     if (!plain.trim()) { showToast("Type something first", "warning"); return; }
     setParaphrasing(field);
-    setTimeout(() => {
-      try {
-        const enhanced = paraphraseField(plain);
-        if (!enhanced || enhanced.trim() === plain.trim()) {
-          setParaphrasing(null);
-          showToast("Text looks good already!", "info");
-          return;
-        }
-        // Convert newlines back to <br> for contenteditable
-        const html = enhanced.replace(/\n/g, "<br>");
-        ref.current.innerHTML = html;
-        showToast("Enhanced successfully!", "success");
-      } catch (err) {
-        showToast("Enhance failed", "error");
-      } finally {
-        setParaphrasing(null);
+    try {
+      const res = await fetch("/api/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: plain, field }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        showToast(data.error || "Enhance failed", "error");
+        return;
       }
-    }, 100);
+      // Write enhanced text back — convert newlines to <br> for contenteditable
+      const html = data.enhanced
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br>");
+      ref.current.innerHTML = html;
+      showToast("Enhanced!", "success");
+    } catch (err) {
+      showToast("Enhance failed: " + (err.message || "Network error"), "error");
+    } finally {
+      setParaphrasing(null);
+    }
   }
 
   function clearFields() {
