@@ -296,11 +296,11 @@ function Editor() {
     return (
       <div style={{ display:"flex", gap:3, marginBottom:6, alignItems:"center", flexWrap:"wrap" }}>
         {/* Bold */}
-        {tbBtn(<b style={{fontFamily:"serif",fontSize:14}}>B</b>, "Bold (select text first)", () => { fieldRef.current?.focus(); execFormat("bold"); })}
+        {tbBtn(<b style={{fontFamily:"serif",fontSize:14}}>B</b>, "Bold (select text first)", () => execFormat("bold"))}
         {/* Italic */}
-        {tbBtn(<i style={{fontFamily:"serif",fontSize:14}}>I</i>, "Italic (select text first)", () => { fieldRef.current?.focus(); execFormat("italic"); })}
+        {tbBtn(<i style={{fontFamily:"serif",fontSize:14}}>I</i>, "Italic (select text first)", () => execFormat("italic"))}
         {/* Underline */}
-        {tbBtn(<u style={{fontFamily:"serif",fontSize:14}}>U</u>, "Underline (select text first)", () => { fieldRef.current?.focus(); execFormat("underline"); })}
+        {tbBtn(<u style={{fontFamily:"serif",fontSize:14}}>U</u>, "Underline (select text first)", () => execFormat("underline"))}
         {dv}
         {tbBtn("+ Step #", "Insert numbered step", () => insertAtCursor(fieldRef, nextStepNum(fieldRef) + ". "))}
         {tbBtn("• Bullet", "Insert bullet point", () => insertAtCursor(fieldRef, "• "))}
