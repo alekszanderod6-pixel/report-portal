@@ -313,7 +313,7 @@ function Editor() {
         {dv}
         <button type="button" title="Enhance with technical writing"
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => doEnhance(field)}
+          onClick={() => { doEnhance(field); }}
           disabled={paraphrasing === field}
           style={{
             display:"inline-flex", alignItems:"center", gap:4, padding:"0 10px", height:28,
