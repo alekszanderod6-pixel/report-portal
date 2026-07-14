@@ -34,16 +34,17 @@ export default function Navbar() {
   const active = (h) => path === h || (h !== '/' && path.startsWith(h));
 
   return (
-    <nav style={{ background: 'var(--navy)', borderBottom: '1px solid rgba(232,146,11,0.2)' }} className="sticky top-0 z-50">
+    <nav style={{ background: 'var(--navy)', borderBottom: '1px solid rgba(232,146,11,0.15)', boxShadow: '0 2px 16px rgba(0,0,0,0.18)' }} className="sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-14">
+        <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/dashboard')}>
-            <div style={{ background: 'var(--accent)' }} className="w-8 h-8 rounded-lg flex items-center justify-center">
+            <div style={{ background: 'linear-gradient(135deg, var(--accent) 0%, #f5a623 100%)', boxShadow: '0 2px 8px rgba(232,146,11,0.35)' }}
+              className="w-9 h-9 rounded-xl flex items-center justify-center">
               <span className="text-white font-bold text-sm font-display">CI</span>
             </div>
             <div className="hidden sm:block">
               <div className="text-white font-display font-bold text-sm leading-tight">C&I Report Portal</div>
-              <div className="text-gray-400 text-xs">Maintenance Department</div>
+              <div className="text-gray-500 text-xs">Maintenance Department</div>
             </div>
           </div>
           <div className="hidden md:flex items-center gap-1">

@@ -125,13 +125,20 @@ export default function Dashboard() {
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
-            { l: "Total Reports", v: reports.length, c: "var(--navy)" },
-            { l: "Drafts", v: drafts, c: "var(--warning)" },
-            { l: "Completed", v: done, c: "var(--success)" },
-            { l: "Total Entries", v: totalE, c: "var(--accent)" },
+            { l: "Total Reports", v: reports.length, c: "var(--navy)", icon: "M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z", bg: "rgba(12,35,64,0.08)" },
+            { l: "Drafts", v: drafts, c: "var(--warning)", icon: "M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z", bg: "rgba(217,119,6,0.1)" },
+            { l: "Completed", v: done, c: "var(--success)", icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z", bg: "rgba(27,107,74,0.1)" },
+            { l: "Total Entries", v: totalE, c: "var(--accent)", icon: "M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z", bg: "rgba(232,146,11,0.1)" },
           ].map((s, i) => (
-            <div key={i} className="bg-white rounded-xl p-5 card-hover" style={{ border: "1px solid var(--border)" }}>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{s.l}</div>
+            <div key={i} className="bg-white rounded-2xl p-5 card-hover" style={{ border: "1px solid var(--border)", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+              <div className="flex items-start justify-between mb-3">
+                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider leading-tight">{s.l}</div>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: s.bg }}>
+                  <svg className="w-4 h-4" style={{ color: s.c }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d={s.icon} />
+                  </svg>
+                </div>
+              </div>
               <div className="font-display font-bold text-3xl" style={{ color: s.c }}>{s.v}</div>
             </div>
           ))}
