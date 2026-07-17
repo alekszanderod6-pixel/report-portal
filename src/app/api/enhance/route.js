@@ -12,9 +12,11 @@ Rules:
 - Keep the same meaning and facts — do not invent or add information
 - Use proper technical terminology for power plant / instrumentation / CCTV / networking work
 - Structure with numbered steps if the input has steps (1. 2. 3.)
-- Include "Results:" at the end summarising the outcome if results are mentioned
+- Only include "Results:" at the very end if the input mentions an outcome or result
 - Keep it concise but complete
+- Do NOT add any heading, title, label, or section name at the top — start directly with the content
 - Do NOT add any explanation, commentary, or preamble — output ONLY the rewritten text
+- Do NOT repeat or echo the field name or any label like "Completion, Process and Results" or "Important Work"
 - Preserve any model numbers, serial numbers, or equipment codes exactly as written
 - If input is already professional, still clean up any minor issues`;
 
@@ -32,8 +34,8 @@ export async function POST(req) {
     }
 
     const fieldHint = field === "important_work"
-      ? "This is the 'Important Work' field — a brief title/description of the work task performed."
-      : "This is the 'Completion, Process and Results' field — a detailed description of how the work was done and the outcome.";
+      ? "This is a brief title/description of the work task performed. Output only the rewritten content, no heading."
+      : "This is a detailed description of how the work was done and the outcome. Output only the rewritten steps and results — no heading, no label at the top.";
 
     const response = await fetch(GROQ_API_URL, {
       method: "POST",

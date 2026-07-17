@@ -165,8 +165,12 @@ function Editor() {
         showToast(data.error || "Enhance failed", "error");
         return;
       }
-      // Write enhanced text back — convert newlines to <br> for contenteditable
-      const html = data.enhanced
+      // Strip any heading the AI may have added at the top (e.g. "Completion, Process and Results:")
+      const cleaned = data.enhanced
+        .replace(/^[\s\S]*?(?:completion[,\s]*process[,\s]*and[,\s]*results|important work)\s*[:\-]?\s*/i, "")
+        .trim();
+      // Write back — convert newlines to <br> for contenteditable, escape HTML special chars
+      const html = cleaned
         .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
         .replace(/\n/g, "<br>");
       ref.current.innerHTML = html;
