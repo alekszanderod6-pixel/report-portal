@@ -165,9 +165,12 @@ function Editor() {
         showToast(data.error || "Enhance failed", "error");
         return;
       }
-      // Strip any heading the AI may have added at the top (e.g. "Completion, Process and Results:")
+      // Strip any heading/label the AI may have added at the top.
+      // Matches lines like "Important Work:", "Completion, Process and Results:", "Here is the rewritten text:", etc.
       const cleaned = data.enhanced
-        .replace(/^[\s\S]*?(?:completion[,\s]*process[,\s]*and[,\s]*results|important work)\s*[:\-]?\s*/i, "")
+        .replace(/^(?:important\s+work|completion[,\s]*process[,\s]*and[,\s]*results|work\s+done|rewritten\s+text|here\s+is[^:\n]*|steps?|process)[:\s\-]*\n?/i, "")
+        // Also strip any remaining leading line that ends with a colon (catch-all for label lines)
+        .replace(/^[^\n]{0,60}:\s*\n/, "")
         .trim();
       // Write back — convert newlines to <br> for contenteditable, escape HTML special chars
       const html = cleaned

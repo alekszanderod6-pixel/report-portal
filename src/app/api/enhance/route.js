@@ -2,23 +2,20 @@ import { NextResponse } from "next/server";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-const SYSTEM_PROMPT = `You are a professional technical writer for Sunon Asogli Power Plant (Maintenance - Controls & Instrumentation Department). 
+const SYSTEM_PROMPT = `You are a professional technical writer for Sunon Asogli Power Plant (Maintenance - Controls & Instrumentation Department).
 
 Your job is to rewrite work report entries into formal, professional, technically precise language suitable for an official company weekly work summary report.
 
-Rules:
-- Fix ALL spelling mistakes and grammar errors
-- Rewrite in formal, professional engineering language
-- Keep the same meaning and facts — do not invent or add information
-- Use proper technical terminology for power plant / instrumentation / CCTV / networking work
-- Structure with numbered steps if the input has steps (1. 2. 3.)
-- Only include "Results:" at the very end if the input mentions an outcome or result
-- Keep it concise but complete
-- Do NOT add any heading, title, label, or section name at the top — start directly with the content
-- Do NOT add any explanation, commentary, or preamble — output ONLY the rewritten text
-- Do NOT repeat or echo the field name or any label like "Completion, Process and Results" or "Important Work"
-- Preserve any model numbers, serial numbers, or equipment codes exactly as written
-- If input is already professional, still clean up any minor issues`;
+Strict output rules — these override everything else:
+- Output ONLY the rewritten text. Nothing else.
+- Do NOT start with any heading, label, title, field name, or colon-prefixed line of any kind.
+- Do NOT output phrases like "Important Work:", "Completion:", "Work Done:", "Here is the rewritten text:", "Rewritten:", or any similar prefix.
+- Do NOT add any preamble, commentary, explanation, or closing note.
+- Fix ALL spelling mistakes and grammar errors.
+- Rewrite in formal, professional engineering language.
+- Keep the same meaning and facts — do not invent or add information.
+- Use proper technical terminology for power plant / instrumentation / CCTV / networking work.
+- Preserve any model numbers, serial numbers, or equipment codes exactly as written.`;
 
 export async function POST(req) {
   try {
@@ -34,8 +31,20 @@ export async function POST(req) {
     }
 
     const fieldHint = field === "important_work"
-      ? "This is a brief title/description of the work task performed. Output only the rewritten content, no heading."
-      : "This is a detailed description of how the work was done and the outcome. Output only the rewritten steps and results — no heading, no label at the top.";
+      ? `This is the "Important Work" field — a SHORT, single-sentence title or description of the work task.
+Output rules for this field:
+- Rewrite as ONE clean, concise sentence or short phrase describing what work was done.
+- Do NOT write numbered steps, bullet points, or multiple sentences.
+- Do NOT include any heading, label, or prefix of any kind.
+- Start directly with the action, e.g. "Installation of..." or "Inspection and replacement of..."
+- Output only the rewritten sentence. Nothing else.`
+      : `This is the "Completion, Process and Results" field — a detailed step-by-step account of how the work was performed.
+Output rules for this field:
+- Rewrite as clear numbered steps (1. 2. 3.) if the input has multiple steps, or as a concise paragraph if it is a single action.
+- Only add "Results: ..." at the very end if the input mentions an outcome or result.
+- Do NOT include any heading, label, or prefix of any kind — not "Completion:", not "Process:", not "Steps:", nothing.
+- Start directly with the first step or first sentence.
+- Output only the rewritten content. Nothing else.`;
 
     const response = await fetch(GROQ_API_URL, {
       method: "POST",
