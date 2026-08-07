@@ -73,10 +73,31 @@ Output rules for this field:
     }
 
     const data = await response.json();
-    const enhanced = data.choices?.[0]?.message?.content?.trim();
+    let enhanced = data.choices?.[0]?.message?.content?.trim();
 
     if (!enhanced) {
       return NextResponse.json({ error: "Empty response from AI" }, { status: 502 });
+    }
+
+    // ── Server-side post-processing ──────────────────────────────────────────
+
+    // 1. Strip any leading label/heading line the AI added (e.g. "Important Work:", "Here is the rewritten text:")
+    enhanced = enhanced
+      .replace(/^(?:important\s+work|completion[,\s]*process[,\s]*and[,\s]*results|work\s+done|rewritten(\s+text)?|here\s+is[^:\n]*|steps?|process|result)[:\s\-]+/i, "")
+      .replace(/^[^\n]{1,80}:\s*\n/, "") // catch-all: any short line ending with colon at the very top
+      .trim();
+
+    // 2. For the "important_work" field: enforce a single clean sentence/phrase.
+    //    No steps, no bullets, no multi-line output — keep only the first meaningful line.
+    if (field === "important_work") {
+      // Take only the first non-empty line
+      const firstLine = enhanced.split(/\n/).find(l => l.trim().length > 0) || enhanced;
+      // Also cut at the first full stop that ends a sentence (not a model number abbreviation)
+      // e.g. "Installation of X. Steps: 1. ..." → "Installation of X."
+      const sentenceMatch = firstLine.match(/^(.+?[.!?])(?:\s|$)/);
+      enhanced = sentenceMatch ? sentenceMatch[1].trim() : firstLine.trim();
+      // Remove any leading step number or bullet the AI may have put
+      enhanced = enhanced.replace(/^[\d]+\.\s*/, "").replace(/^[•\-]\s*/, "").trim();
     }
 
     return NextResponse.json({ enhanced });
