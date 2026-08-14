@@ -63,7 +63,7 @@ export default function Dashboard() {
         .from("reports")
         .select("*, report_entries(count)")
         .eq("user_id", user.id)
-        .order("updated_at", { ascending: false });
+        .order("date_from", { ascending: false });
       setReports(data || []);
     } catch (err) {
       setErrMsg("Catch error: " + err.message);
@@ -168,15 +168,31 @@ export default function Dashboard() {
                     <tr key={r.id} style={{ borderBottom: "1px solid var(--border)" }} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="font-medium text-gray-900">{fmt(r.date_from)} - {fmt(r.date_to)}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">{r.name}</div>
+                        <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
+                          {r.name}
+                          {r.source === "uploaded" && (
+                            <span className="px-1.5 py-0.5 rounded font-semibold" style={{ background: "rgba(232,146,11,0.12)", color: "var(--accent)", fontSize: "0.6rem" }}>UPLOADED</span>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-gray-600">{r.report_entries && r.report_entries[0] ? r.report_entries[0].count : 0}</td>
+                      <td className="px-6 py-4 text-gray-600">
+                        {r.source === "uploaded" ? "—" : (r.report_entries && r.report_entries[0] ? r.report_entries[0].count : 0)}
+                      </td>
                       <td className="px-6 py-4">{r.status === "completed" ? <span className="badge badge-success">Completed</span> : <span className="badge badge-warning">Draft</span>}</td>
                       <td className="px-6 py-4 text-gray-500 text-xs">{fmt(r.updated_at)}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => router.push("/report?id=" + r.id)} className="btn btn-outline btn-sm">Edit</button>
-                          <button onClick={() => dup(r)} className="btn btn-outline btn-sm">Copy</button>
+                          {r.source === "uploaded" ? (
+                            <a href={r.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-sm">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                              View PDF
+                            </a>
+                          ) : (
+                            <>
+                              <button onClick={() => router.push("/report?id=" + r.id)} className="btn btn-outline btn-sm">Edit</button>
+                              <button onClick={() => dup(r)} className="btn btn-outline btn-sm">Copy</button>
+                            </>
+                          )}
                           <button onClick={() => del(r.id)} className="btn btn-sm" style={{ background: "transparent", color: "var(--danger)" }}>Del</button>
                         </div>
                       </td>
