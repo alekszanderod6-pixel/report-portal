@@ -12,6 +12,9 @@ function getServiceClient() {
 export async function POST(req) {
   try {
     // ── 1. Auth check: caller must be admin ──────────────────────────────
+    // We use the service-role client for the profile lookup to avoid RLS
+    // recursion issues (the admin policy queries profiles to check role,
+    // which can deadlock with the anon client).
     const anonClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -22,20 +25,27 @@ export async function POST(req) {
     const token = authHeader.replace("Bearer ", "").trim();
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    // Verify the JWT is valid and get the user id
     const { data: { user }, error: authErr } = await anonClient.auth.getUser(token);
     if (authErr || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { data: profile } = await anonClient
+    // Use service-role to read profile — bypasses RLS, no recursion
+    const svc = getServiceClient();
+    const { data: profile } = await svc
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
 
     if (!profile || profile.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden — admin only" }, { status: 403 });
     }
 
     // ── 2. Parse body ────────────────────────────────────────────────────
+    // Check service key is available before going further
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json({ error: "Server misconfigured: SUPABASE_SERVICE_ROLE_KEY missing" }, { status: 500 });
+    }
     const { targetUserId, dateFrom, dateTo, fileBase64, fileName, reportName } = await req.json();
 
     if (!targetUserId || !dateFrom || !dateTo || !fileBase64 || !fileName) {
