@@ -1,51 +1,42 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Use service-role key so we can bypass RLS for admin inserts
 function getServiceClient() {
-  const url  = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key  = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Missing Supabase env vars");
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
 export async function POST(req) {
   try {
-    // ── 1. Auth check: caller must be admin ──────────────────────────────
-    // We use the service-role client for the profile lookup to avoid RLS
-    // recursion issues (the admin policy queries profiles to check role,
-    // which can deadlock with the anon client).
+    // ── 1. Verify JWT and check admin role ───────────────────────────────
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.replace("Bearer ", "").trim();
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Validate the token using the anon client
     const anonClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       { auth: { persistSession: false } }
     );
-
-    const authHeader = req.headers.get("authorization") || "";
-    const token = authHeader.replace("Bearer ", "").trim();
-    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    // Verify the JWT is valid and get the user id
     const { data: { user }, error: authErr } = await anonClient.auth.getUser(token);
     if (authErr || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Use service-role to read profile — bypasses RLS, no recursion
+    // Use service-role to read profile — bypasses RLS, avoids recursion
     const svc = getServiceClient();
-    const { data: profile } = await svc
+    const { data: callerProfile } = await svc
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
 
-    if (!profile || profile.role !== "admin") {
+    if (!callerProfile || callerProfile.role !== "admin") {
       return NextResponse.json({ error: "Forbidden — admin only" }, { status: 403 });
     }
 
-    // ── 2. Parse body ────────────────────────────────────────────────────
-    // Check service key is available before going further
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return NextResponse.json({ error: "Server misconfigured: SUPABASE_SERVICE_ROLE_KEY missing" }, { status: 500 });
-    }
+    // ── 2. Parse and validate body ───────────────────────────────────────
     const { targetUserId, dateFrom, dateTo, fileBase64, fileName, reportName } = await req.json();
 
     if (!targetUserId || !dateFrom || !dateTo || !fileBase64 || !fileName) {
@@ -53,28 +44,23 @@ export async function POST(req) {
     }
 
     // ── 3. Upload PDF to Supabase Storage ────────────────────────────────
-    const svc = getServiceClient();
-
-    // Decode base64 → Uint8Array
     const binaryStr = atob(fileBase64);
     const bytes = new Uint8Array(binaryStr.length);
     for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
 
-    const storagePath = `${targetUserId}/${dateFrom}_${fileName.replace(/[^a-zA-Z0-9._\-]/g, "_")}`;
+    const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const storagePath = `${targetUserId}/${dateFrom}_${safeName}`;
 
     const { error: uploadErr } = await svc.storage
       .from("report-uploads")
-      .upload(storagePath, bytes, {
-        contentType: "application/pdf",
-        upsert: true,
-      });
+      .upload(storagePath, bytes, { contentType: "application/pdf", upsert: true });
 
     if (uploadErr) {
       console.error("Storage upload error:", uploadErr);
       return NextResponse.json({ error: "File upload failed: " + uploadErr.message }, { status: 500 });
     }
 
-    // Get a signed URL (valid 10 years — effectively permanent for this use case)
+    // Signed URL valid for 10 years
     const { data: signedData, error: signErr } = await svc.storage
       .from("report-uploads")
       .createSignedUrl(storagePath, 60 * 60 * 24 * 365 * 10);
@@ -84,20 +70,17 @@ export async function POST(req) {
       return NextResponse.json({ error: "Could not generate file URL" }, { status: 500 });
     }
 
-    const fileUrl = signedData.signedUrl;
-
     // ── 4. Insert report row for target user ─────────────────────────────
     const { data: newReport, error: insertErr } = await svc
       .from("reports")
       .insert({
-        user_id:  targetUserId,
-        name:     reportName || "Uploaded Report",
-        date_from: dateFrom,
-        date_to:   dateTo,
-        status:   "completed",
-        source:   "uploaded",
-        file_url:  fileUrl,
-        // Set updated_at = date_from so it sorts chronologically in the dashboard
+        user_id:    targetUserId,
+        name:       reportName || "Uploaded Report",
+        date_from:  dateFrom,
+        date_to:    dateTo,
+        status:     "completed",
+        source:     "uploaded",
+        file_url:   signedData.signedUrl,
         updated_at: dateFrom,
       })
       .select()
