@@ -93,7 +93,7 @@ export default function AdminPage() {
     if (!upDateTo)   { showToast("Enter date to", "warning"); return; }
     if (!upFile)     { showToast("Select a PDF file", "warning"); return; }
     if (upFile.type !== "application/pdf") { showToast("File must be a PDF", "warning"); return; }
-    if (upFile.size > 10 * 1024 * 1024)   { showToast("File too large (max 10MB)", "warning"); return; }
+    if (upFile.size > 5 * 1024 * 1024)    { showToast("File too large (max 5MB)", "warning"); return; }
 
     setUploading(true);
     try {
@@ -125,7 +125,12 @@ export default function AdminPage() {
         showToast(data.error || "Upload failed", "error"); return;
       }
 
-      showToast("Report uploaded successfully!", "success");
+      // Show compression savings if meaningful
+      const saved = data.savedKB || 0;
+      const msg = saved > 10
+        ? `Uploaded! Compressed by ${saved}KB (${data.originalKB}KB → ${data.storedKB}KB)`
+        : "Report uploaded successfully!";
+      showToast(msg, "success");
 
       // Reset form
       setUpUser(""); setUpDateFrom(""); setUpDateTo(""); setUpName(""); setUpFile(null);
@@ -469,7 +474,7 @@ export default function AdminPage() {
                         </div>
                         <div className="text-center">
                           <p className="text-sm font-medium text-gray-600">Click to select or drag & drop</p>
-                          <p className="text-xs text-gray-400">PDF files only · max 10MB</p>
+                          <p className="text-xs text-gray-400">PDF files only · max 5MB · auto-compressed on upload</p>
                         </div>
                       </>
                     )}

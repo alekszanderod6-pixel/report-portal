@@ -134,9 +134,21 @@ function Editor() {
     if (f.size > 2000000) { showToast("Logo must be under 2MB", "warning"); return; }
     const rd = new FileReader();
     rd.onload = (ev) => {
-      setLogoBase64(ev.target.result);
-      if (reportId) { try { localStorage.setItem("logo_" + reportId, ev.target.result); } catch (_) {} }
-      showToast("Logo uploaded!", "success");
+      // Compress the logo image to max 200×200px, quality 0.75 before storing
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 200;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width  = Math.round(img.width  * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL("image/jpeg", 0.75);
+        setLogoBase64(compressed);
+        if (reportId) { try { localStorage.setItem("logo_" + reportId, compressed); } catch (_) {} }
+        showToast("Logo uploaded!", "success");
+      };
+      img.src = ev.target.result;
     };
     rd.readAsDataURL(f);
   }
