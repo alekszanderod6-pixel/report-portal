@@ -26,6 +26,16 @@ export default function AdminPage() {
   const [uploading, setUploading]   = useState(false);
   const fileRef = useRef(null);
 
+  // ── Parts library state ───────────────────────────────────────────────────
+  const [parts, setParts]           = useState([]);
+  const [partsLoading, setPartsLoading] = useState(false);
+  const [editingPart, setEditingPart]   = useState(null); // { id, name, category }
+  const [newPartName, setNewPartName]   = useState("");
+  const [newPartCat, setNewPartCat]     = useState("General");
+  const [savingPart, setSavingPart]     = useState(false);
+
+  const CATEGORIES = ["General","CCTV","NVR/DVR","Network","Instrumentation","Electrical","Accessories","Other"];
+
   useEffect(() => { check(); }, []);
 
   async function check() {
@@ -49,6 +59,50 @@ export default function AdminPage() {
       .order("created_at", { ascending: false });
     setReports(rd || []);
     setUsers(ud || []);
+  }
+
+  async function loadParts() {
+    setPartsLoading(true);
+    const { data } = await supabase
+      .from("parts_library")
+      .select("*")
+      .order("category")
+      .order("name");
+    setParts(data || []);
+    setPartsLoading(false);
+  }
+
+  async function savePart(e) {
+    e.preventDefault();
+    if (!newPartName.trim()) { showToast("Enter a part name", "warning"); return; }
+    setSavingPart(true);
+    const { error } = await supabase.from("parts_library").insert({
+      name: newPartName.trim(), category: newPartCat, source: "manual"
+    });
+    if (error) {
+      showToast(error.message.includes("unique") ? "Part already exists in library" : "Save failed", "error");
+    } else {
+      showToast("Part added!", "success");
+      setNewPartName(""); setNewPartCat("General");
+      await loadParts();
+    }
+    setSavingPart(false);
+  }
+
+  async function updatePart(id, name, category) {
+    const { error } = await supabase.from("parts_library").update({ name: name.trim(), category }).eq("id", id);
+    if (error) { showToast("Update failed", "error"); return; }
+    showToast("Saved", "success");
+    setEditingPart(null);
+    await loadParts();
+  }
+
+  async function deletePart(id) {
+    if (!confirm("Remove this part from the library?")) return;
+    const { error } = await supabase.from("parts_library").delete().eq("id", id);
+    if (error) { showToast("Delete failed", "error"); return; }
+    setParts(p => p.filter(x => x.id !== id));
+    showToast("Removed", "success");
   }
 
   async function view(r) {
@@ -161,7 +215,7 @@ export default function AdminPage() {
 
   if (!profile) return null;
 
-  const TABS = ["reports", "users", "upload"];
+  const TABS = ["reports", "users", "upload", "library"];
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
@@ -192,7 +246,7 @@ export default function AdminPage() {
         {/* Tabs */}
         <div className="flex gap-1 mb-6" style={{ borderBottom: "2px solid var(--border)" }}>
           {TABS.map(t => (
-            <button key={t} onClick={() => { setTab(t); setSel(null); }}
+            <button key={t} onClick={() => { setTab(t); setSel(null); if (t === "library") loadParts(); }}
               className="px-4 py-2.5 text-sm font-semibold transition-all capitalize flex items-center gap-1.5"
               style={{
                 color: tab === t ? "var(--accent)" : "var(--muted)",
@@ -204,7 +258,12 @@ export default function AdminPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                 </svg>
               )}
-              {t === "upload" ? "Upload Report" : t}
+              {t === "library" && (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                </svg>
+              )}
+              {t === "upload" ? "Upload Report" : t === "library" ? "Parts Library" : t}
             </button>
           ))}
         </div>
@@ -378,7 +437,7 @@ export default function AdminPage() {
         ) :
 
         /* ── UPLOAD TAB ── */
-        (
+        tab === "upload" ? (
           <div className="max-w-xl">
             <div className="bg-white rounded-xl p-6" style={{ border: "1px solid var(--border)" }}>
               <div className="mb-6">
@@ -503,6 +562,146 @@ export default function AdminPage() {
               style={{ background: "linear-gradient(135deg,#0C2340,#1A3A5C)", border: "1px solid rgba(232,146,11,0.2)" }}>
               <span style={{ color: "var(--accent)", fontWeight: 600 }}>How it works: </span>
               The PDF is stored securely and linked to the selected user. It appears in their dashboard as a completed report, sorted by the date range you enter — so it slots in chronologically among their other reports, not at the top.
+            </div>
+          </div>
+        ) :
+
+        /* ── PARTS LIBRARY TAB ── */
+        (
+          <div>
+            {/* Add new part form */}
+            <div className="bg-white rounded-xl p-5 mb-6" style={{ border: "1px solid var(--border)" }}>
+              <h2 className="font-display font-semibold text-base mb-4" style={{ color: "var(--navy)" }}>Add Part to Library</h2>
+              <form onSubmit={savePart} className="flex flex-wrap gap-3 items-end">
+                <div style={{ flex: "1 1 260px" }}>
+                  <label className="block text-xs font-medium mb-1 text-gray-600">Part Name / Model Number</label>
+                  <input
+                    type="text"
+                    value={newPartName}
+                    onChange={e => setNewPartName(e.target.value)}
+                    placeholder="e.g. DS-2CD2143G2-I or Cat6 UTP Cable"
+                    className="input"
+                    required
+                  />
+                </div>
+                <div style={{ flex: "0 1 180px" }}>
+                  <label className="block text-xs font-medium mb-1 text-gray-600">Category</label>
+                  <select value={newPartCat} onChange={e => setNewPartCat(e.target.value)} className="input">
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <button type="submit" disabled={savingPart} className="btn btn-primary" style={{ height: 38, whiteSpace: "nowrap" }}>
+                  {savingPart
+                    ? <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                    : <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Part
+                      </>
+                  }
+                </button>
+              </form>
+            </div>
+
+            {/* Parts table */}
+            <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+              <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
+                <div>
+                  <h2 className="font-display font-semibold text-base" style={{ color: "var(--navy)" }}>Parts Library</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">{parts.length} items · auto-captured from reports + manually added</p>
+                </div>
+                <button onClick={loadParts} className="btn btn-outline btn-sm" title="Refresh">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                </button>
+              </div>
+
+              {partsLoading ? (
+                <div className="p-8 text-center"><div className="spinner mx-auto" style={{ width: 28, height: 28, borderWidth: 3 }} /></div>
+              ) : !parts.length ? (
+                <div className="p-8 text-center text-gray-400 text-sm">No parts yet. Add one above or save a report entry with spare parts.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr style={{ background: "#F8FAFC", borderBottom: "1px solid var(--border)" }}>
+                        {["Part Name / Model Number", "Category", "Source", ""].map(h => (
+                          <th key={h} className={"text-left px-5 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wider " + (h === "" ? "text-right" : "")}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parts.map(p => (
+                        <tr key={p.id} style={{ borderBottom: "1px solid var(--border)" }} className="hover:bg-gray-50">
+                          <td className="px-5 py-3">
+                            {editingPart?.id === p.id ? (
+                              <input
+                                type="text"
+                                value={editingPart.name}
+                                onChange={e => setEditingPart(ep => ({ ...ep, name: e.target.value }))}
+                                className="input"
+                                style={{ padding: "0.3rem 0.6rem", fontSize: "0.82rem" }}
+                                autoFocus
+                              />
+                            ) : (
+                              <span className="font-medium text-gray-900">{p.name}</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3">
+                            {editingPart?.id === p.id ? (
+                              <select
+                                value={editingPart.category}
+                                onChange={e => setEditingPart(ep => ({ ...ep, category: e.target.value }))}
+                                className="input"
+                                style={{ padding: "0.3rem 0.6rem", fontSize: "0.82rem", width: 160 }}>
+                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                              </select>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-xs font-medium"
+                                style={{ background: "rgba(12,35,64,0.07)", color: "var(--navy)" }}>
+                                {p.category}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3">
+                            <span className={"badge " + (p.source === "manual" ? "badge-info" : "badge-warning")}
+                              style={{ fontSize: "0.62rem" }}>
+                              {p.source === "manual" ? "Manual" : "Auto-captured"}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3">
+                            <div className="flex items-center justify-end gap-1">
+                              {editingPart?.id === p.id ? (
+                                <>
+                                  <button onClick={() => updatePart(p.id, editingPart.name, editingPart.category)} className="btn btn-primary btn-sm">Save</button>
+                                  <button onClick={() => setEditingPart(null)} className="btn btn-outline btn-sm">Cancel</button>
+                                </>
+                              ) : (
+                                <>
+                                  <button onClick={() => setEditingPart({ id: p.id, name: p.name, category: p.category })}
+                                    className="p-1 rounded hover:bg-gray-100" title="Edit">
+                                    <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                                    </svg>
+                                  </button>
+                                  <button onClick={() => deletePart(p.id)}
+                                    className="p-1 rounded hover:bg-red-50" title="Delete">
+                                    <svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                    </svg>
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}

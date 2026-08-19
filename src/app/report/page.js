@@ -6,6 +6,7 @@ import { downloadReportPDF } from "@/lib/pdfGenerator";
 import { stripHtml } from "@/lib/paraphraser";
 import Navbar from "@/components/Navbar";
 import { showToast } from "@/components/Toast";
+import PartsSelector from "@/components/PartsSelector";
 
 // ─── Rich text helpers ────────────────────────────────────────────────────────
 
@@ -77,7 +78,8 @@ function Editor() {
   const fileRef = useRef(null);
   const workRef = useRef(null);
   const procRef = useRef(null);
-  const partsRef = useRef(null); // still a textarea
+  const partsRef = useRef(null); // kept for compat — we now use spareParts state
+  const [spareParts, setSpareParts] = useState("");
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -200,7 +202,7 @@ function Editor() {
   function clearFields() {
     if (workRef.current) workRef.current.innerHTML = "";
     if (procRef.current) procRef.current.innerHTML = "";
-    if (partsRef.current) partsRef.current.value = "";
+    setSpareParts("");
     setIsCompleted("In Progress");
     setEditIdx(null);
   }
@@ -210,7 +212,7 @@ function Editor() {
     const workPlain = getPlain(workRef);
     const process = getHtml(procRef);
     const processPlain = getPlain(procRef);
-    const parts = partsRef.current?.value || "";
+    const parts = spareParts;
     if (!workPlain.trim()) { showToast("Enter the important work", "warning"); return; }
     if (!processPlain.trim()) { showToast("Enter completion process", "warning"); return; }
     if (editIdx !== null) {
@@ -228,11 +230,11 @@ function Editor() {
   function editEntry(i) {
     const e = entries[i];
     setIsCompleted(e.is_completed);
+    setSpareParts(e.spare_parts || "");
     setEditIdx(i);
     setTimeout(() => {
       if (workRef.current) workRef.current.innerHTML = e.important_work || "";
       if (procRef.current) procRef.current.innerHTML = e.completion_process || "";
-      if (partsRef.current) partsRef.current.value = e.spare_parts || "";
     }, 30);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -471,10 +473,12 @@ function Editor() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1.5 text-gray-700">Spare Parts Model Numbers</label>
-                    <textarea ref={partsRef}
-                      placeholder={"1. MD: RG-AP680-O(P)\n2. Cam MD: DS-2DC42201W-D\n(or None)"}
-                      rows={3} className="input" style={{ resize:"vertical", minHeight:72, fontFamily:"DM Sans, sans-serif" }} />
+                    <label className="block text-sm font-medium mb-1.5 text-gray-700">Spare Parts / Materials Used</label>
+                    <PartsSelector
+                      value={spareParts}
+                      onChange={setSpareParts}
+                      placeholder="Search library or type a model number…"
+                    />
                   </div>
                 </div>
 
