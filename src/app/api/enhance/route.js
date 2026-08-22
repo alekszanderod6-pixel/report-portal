@@ -53,7 +53,7 @@ Output rules for this field:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
+        model: "openai/gpt-oss-20b",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
@@ -68,8 +68,8 @@ Output rules for this field:
 
     if (!response.ok) {
       const err = await response.text();
-      console.error("Groq error:", err);
-      return NextResponse.json({ error: "AI service error" }, { status: 502 });
+      console.error("Groq error:", response.status, err);
+      return NextResponse.json({ error: `AI service error (${response.status})` }, { status: 502 });
     }
 
     const data = await response.json();
